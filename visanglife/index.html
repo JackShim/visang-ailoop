@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>자유 게시판</title>
+    <style>
+        :root {
+            --primary-color: #00b5e2;
+            --secondary-color: #6a71f6;
+            --bg-color: #f8f9fa;
+            --text-color: #2b2b2b;
+            --light-color: #ffffff;
+            --border-color: #e9ecef;
+            --sidebar-bg: #fdfdfd;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            --sidebar-width: 280px; /* 사이드바 기본 너비 변수 */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        
+        body.is-resizing {
+            user-select: none;
+            cursor: col-resize;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* --- 헤더 --- */
+        .main-header {
+            background: var(--light-color);
+            padding: 1.2rem 0;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky; /* 스크롤해도 상단에 고정 */
+            top: 0; /* 뷰포트 상단에 고정 */
+            z-index: 1000; /* 다른 요소 위에 표시 */
+        }
+
+        .main-header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px; /* Add gap for spacing */
+        }
+        
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .write-button {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        .write-button:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        /* --- 메인 레이아웃 --- */
+        .main-layout {
+            display: flex;
+            padding-top: 20px;
+        }
+        
+        /* --- 사이드바 --- */
+        .sidebar {
+            flex: 0 0 var(--sidebar-width);
+            padding: 20px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            position: relative; /* 리사이저 위치의 기준 */
+            min-width: 200px; /* 최소 너비 */
+            max-width: 500px; /* 최대 너비 */
+        }
+        
+        .resizer {
+            position: absolute;
+            top: 0;
+            right: -2.5px;
+            width: 5px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+        }
+        
+        .header-search { /* New class for search in header */
+            flex-grow: 1; /* Allow search bar to take available space */
+            max-width: 600px; /* Limit max width */
+            display: flex;
+            align-items: center;
+        }
+        #searchInput {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 20px 0 0 20px; /* 왼쪽 모서리만 둥글게 */
+            border-right: none; /* 오른쪽 테두리 제거 */
+            outline: none; /* 포커스 시 테두리 제거 */
+        }
+        #searchInput:focus {
+            border-color: var(--primary-color);
+        }
+
+        .search-button {
+            padding: 10px 15px; /* 패딩 줄여서 크기 조절 */
+            font-size: 1.2rem; /* 화살표가 잘 보이도록 크기 키움 */
+            line-height: 1; /* 라인 높이 조절 */
+            cursor: pointer;
+            background-color: var(--primary-color);
+            color: var(--light-color); /* 화살표 색상 유지 */
+            border: 1px solid var(--primary-color);
+            border-left: none; /* 검색창과 이어지도록 왼쪽 테두리 제거 */
+            border-radius: 0 20px 20px 0; /* 오른쪽 모서리만 둥글게 */
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .search-button:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .category-nav h3 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            padding-left: 10px;
+        }
+        .category-nav a {
+            display: block;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            text-decoration: none;
+            color: #555;
+            border-radius: 8px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .category-nav a:hover { background-color: #eef; }
+        .category-nav a.active {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            font-weight: 600;
+        }
+
+        /* --- 콘텐츠 그리드 --- */
+        .content-main {
+            flex: 1;
+            padding: 20px 30px;
+            min-width: 0; /* flex item이 줄어들 수 있도록 설정 */
+        }
+
+        .post-grid {
+            display: grid;
+            gap: 25px;
+            grid-template-columns: repeat(1, 1fr);
+        }
+
+        @media (min-width: 576px) {
+            .post-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (min-width: 768px) {
+            .post-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        @media (min-width: 992px) {
+            .post-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        @media (min-width: 1400px) {
+            .post-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+
+        .post-card {
+            background: var(--light-color);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+        .post-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+        .post-card .card-content { 
+            padding: 20px; 
+            flex-grow: 1;
+        }
+        .post-card .card-content h3 { font-size: 1.3rem; margin-bottom: 10px; }
+        .post-card .card-content p { font-size: 0.95rem; color: #6c757d; margin-bottom: 15px; }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            padding: 15px 20px;
+        }
+        .author-info { display: flex; align-items: center; font-size: 0.9rem; font-weight: 600; }
+        .author-info img { width: 30px; height: 30px; border-radius: 50%; margin-right: 10px; object-fit: cover; }
+        .comment-count-divider {
+            margin: 0 8px;
+            color: var(--border-color);
+        }
+        .comment-count {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .tags span {
+            background-color: var(--bg-color);
+            color: var(--secondary-color);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+            display: none;
+            grid-column: 1 / -1;
+        }
+
+        /* --- Right Header Controls --- */
+        .right-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* --- View Controls --- */
+        .view-controls {
+            display: flex;
+            align-items: center;
+        }
+        .view-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-left: 5px;
+            color: #aaa;
+            display: flex;
+            align-items: center;
+        }
+        .view-btn.active {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            border-color: var(--primary-color);
+        }
+        .view-btn svg {
+            vertical-align: middle;
+        }
+
+        /* --- List View Styles --- */
+        .post-list-view {
+            display: block; /* Ensure it's a block layout */
+            gap: 0; /* Remove gap between list items */
+        }
+        .post-list-view .post-card {
+            flex-direction: row; /* Keep content and footer side by side */
+            background: var(--light-color); /* Retain background */
+            border-radius: 0; /* Remove border-radius */
+            box-shadow: none; /* Remove shadow */
+            margin-bottom: 0; /* No margin between cards, border will separate */
+            padding: 15px 0; /* Add vertical padding */
+            border-bottom: 1px solid var(--border-color); /* Add bottom border */
+            align-items: center;
+        }
+        .post-list-view .post-card:last-child {
+            border-bottom: none; /* No border for the last item */
+        }
+        .post-list-view .post-card .card-content {
+            flex-grow: 1;
+            padding: 0 15px; /* Adjust padding */
+            display: flex; /* Make content flexible */
+            flex-direction: column; /* Stack title and content */
+        }
+        .post-list-view .post-card .card-content h3 {
+            font-size: 1.1rem; /* Smaller title */
+            margin-bottom: 5px; /* Smaller margin below title */
+        }
+        .post-list-view .post-card .card-content p {
+            display: none; /* Hide content preview in list view */
+            font-size: 0.9rem; /* Smaller font for content preview */
+            color: #888; /* Lighter color */
+            margin-bottom: 0; /* No bottom margin */
+            white-space: nowrap; /* Prevent wrapping */
+            overflow: hidden; /* Hide overflow */
+            text-overflow: ellipsis; /* Add ellipsis for overflow */
+            max-width: 100%; /* Ensure it respects parent width */
+        }
+        .post-list-view .post-card .card-footer {
+            display: flex; /* Make footer flexible */
+            flex-direction: row; /* Arrange items in a row */
+            align-items: center;
+            border-top: none;
+            border-left: none; /* Remove left border */
+            padding: 0 15px; /* Adjust padding */
+            min-width: unset; /* Remove min-width constraint */
+            white-space: nowrap; /* Keep footer items on one line */
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .post-list-view .post-card .card-footer .author-info {
+            display: flex;
+            align-items: center;
+        }
+        .post-list-view .post-card .card-footer .comment-count-divider {
+            margin: 0 5px; /* Smaller divider margin */
+        }
+        .post-list-view .post-card .card-footer .tags {
+            margin-left: 10px; /* Space from author/comment */
+        }
+        .post-list-view .post-card .card-footer .tags span {
+            padding: 2px 6px; /* Smaller tag padding */
+            font-size: 0.75rem; /* Smaller tag font */
+        }
+    </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script>
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyC2IkRFY9POOJFc2NP3mMqD4T_YqLPFXmQ",
+        authDomain: "vivalife-503d0.firebaseapp.com",
+        projectId: "vivalife-503d0",
+        storageBucket: "vivalife-503d0.appspot.com",
+        messagingSenderId: "405115176188",
+        appId: "1:405115176188:web:bd53f4787ed12bdc194379",
+        measurementId: "G-PSCM4YP11J"
+      };
+    
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+    </script>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="container">
+            <a href="index.html" class="logo">VISANG LIFE</a>
+            <div class="search-container header-search">
+                <input type="text" id="searchInput" placeholder="관심사, 태그 등으로 검색">
+                <button id="searchButton" class="search-button">&#10140;</button>
+            </div>
+            <div class="right-controls">
+                <div class="view-controls">
+                    <button id="grid-view-btn" class="view-btn active" title="Grid View">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+                    </button>
+                    <button id="list-view-btn" class="view-btn" title="List View">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    </button>
+                </div>
+                <a href="write.html" class="write-button">글쓰기</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container main-layout">
+        <aside class="sidebar" id="sidebar">
+            <nav class="category-nav">
+                <h3>카테고리</h3>
+                <a href="#" class="category-link active" data-category="all">전체 보기</a>
+                <a href="#" class="category-link" data-category="총무타임"># 총무타임</a>
+                <a href="#" class="category-link" data-category="동호회"># 동호회</a>
+                <a href="#" class="category-link" data-category="헬프데스크"># 헬프데스크</a>
+                <a href="#" class="category-link" data-category="교육문화활동비"># 교육문화활동비</a>
+                <a href="#" class="category-link" data-category="비바미"># 비바미</a>
+                <a href="#" class="category-link" data-category="맛집추천"># 맛집추천</a>
+                <a href="#" class="category-link" data-category="출퇴근"># 출퇴근</a>
+                <a href="#" class="category-link" data-category="주차"># 주차</a>
+                <a href="#" class="category-link" data-category="기타"># 기타</a>
+            </nav>
+            <div class="resizer" id="resizer"></div>
+        </aside>
+
+        <main class="content-main">
+
+            <div class="post-grid" id="post-list">
+                <div class="post-card" data-category="총무타임">
+
+                    <div class="card-content"><h3>총무타임 공지사항</h3><p>중요한 회의 일정, 공용 비품 신청 등 총무 업무 관련 소식을 전해드립니다.</p></div>
+                    <div class="card-footer">
+                        <div class="author-info"><span>총무부</span></div>
+                        <div class="tags"><span>#총무타임</span></div>
+                    </div>
+                </div>
+                <div class="post-card" data-category="동호회">
+
+                    <div class="card-content"><h3>새로운 동호회원 모집</h3><p>함께 취미를 공유할 새로운 동호회원을 모집합니다! 관심있는 분들 연락주세요.</p></div>
+                    <div class="card-footer">
+                        <div class="author-info"><span>동호회장</span></div>
+                        <div class="tags"><span>#동호회</span></div>
+                    </div>
+                </div>
+                <div class="post-card" data-category="헬프데스크">
+
+                    <div class="card-content"><h3>IT 기기 문제 해결 가이드</h3><p>자주 묻는 IT 기기 문제 해결 방법과 헬프데스크 이용 안내입니다.</p></div>
+                    <div class="card-footer">
+                        <div class="author-info"><span>IT지원팀</span></div>
+                        <div class="tags"><span>#헬프데스크</span></div>
+                    </div>
+                </div>
+                <div class="post-card" data-category="교육문화활동비">
+
+                    <div class="card-content"><h3>2025년 교육문화활동비 신청 안내</h3><p>직원들의 역량 강화를 위한 교육문화활동비 신청 기간이 시작됩니다.</p></div>
+                    <div class="card-footer">
+                        <div class="author-info"><span>인사팀</span></div>
+                        <div class="tags"><span>#교육문화활동비</span></div>
+                    </div>
+                </div>
+                <div class="post-card" data-category="비바미">
+
+                    <div class="card-content"><h3>비바미 캠페인: 나를 위한 시간</h3><p>바쁜 일상 속에서도 나를 돌아보고 성장시키는 비바미 캠페인에 참여하세요.</p></div>
+                    <div class="card-footer">
+                        <div class="author-info"><span>마케팅팀</span></div>
+                        <div class="tags"><span>#비바미</span></div>
+                    </div>
+                </div>
+                <div class="post-card" data-category="맛집추천">
+
+                    <div class="card-content"><h3>사내 맛집 동아리 추천!</h3><p>점심시간이 즐거워지는 숨겨진 맛집들을 소개합니다.</p></div>
+                    <div class="card-footer">
+                        <div class="author-info"><span>미식가</span></div>
+                        <div class="tags"><span>#맛집추천</span></div>
+                    </div>
+                </div>
+                <div class="no-results"><p>검색 결과가 없습니다.</p></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            let allPosts = [];
+            const postGrid = document.getElementById('post-list');
+            const noResults = document.querySelector('.no-results');
+            
+            // --- 필터링 및 검색 기능 요소 (Moved up) ---
+            const searchInput = document.getElementById('searchInput');
+            const searchButton = document.getElementById('searchButton');
+            const categoryLinks = document.querySelectorAll('.category-link');
+
+            // --- 포스트 렌더링 함수 ---
+            function renderPosts(postsToRender) {
+                // Clear all previous content, including error messages
+                postGrid.innerHTML = '';
+
+                if (postsToRender.length === 0) {
+                    noResults.style.display = 'block';
+                } else {
+                    noResults.style.display = 'none';
+
+                    // Check current view
+                    const isListView = postGrid.classList.contains('post-list-view');
+
+                    // Date formatting function (only for list view)
+                    const formatDateForList = (timestamp) => {
+                        if (!timestamp || typeof timestamp.toDate !== 'function') {
+                            return '날짜 없음';
+                        }
+                        const date = timestamp.toDate();
+                        const year = String(date.getFullYear()).slice(-2);
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}/${month}/${day}`;
+                    };
+
+                    postsToRender.forEach(post => {
+                        if (!post) return; // Skip if post object is null or undefined
+
+                        const postCard = document.createElement('div');
+                        postCard.className = 'post-card';
+                        postCard.dataset.category = post.category || '기타';
+                        postCard.dataset.id = post.id;
+
+                        const title = post.title || '제목 없음';
+                        const content = post.content || '';
+                        const author = post.author || '작성자 없음';
+                        const category = post.category || '기타';
+                        const commentCount = post.commentCount || 0;
+
+                        if (isListView) {
+                            postCard.innerHTML = `
+                                <div class="card-content">
+                                    <h3>${title}</h3>
+                                    <p>${content.substring(0, 150)}${content.length > 150 ? '...' : ''}</p>
+                                </div>
+                                <div class="card-footer">
+                                    <div class="author-info">
+                                        <span>${author}</span>
+                                        <span class="comment-count-divider">|</span>
+                                        <span class="comment-count">💬 ${commentCount}</span>
+                                        <span class="comment-count-divider">|</span>
+                                        <span class="post-date">${formatDateForList(post.createdAt)}</span>
+                                    </div>
+                                    <div class="tags"><span>#${category}</span></div>
+                                </div>
+                            `;
+                        } else {
+                            postCard.innerHTML = `
+                                <div class="card-content"><h3>${title}</h3><p>${content.substring(0, 50)}...</p></div>
+                                <div class="card-footer">
+                                    <div class="author-info">
+                                        <span>${author}</span>
+                                        <span class="comment-count-divider">|</span>
+                                        <span class="comment-count">💬 ${commentCount}</span>
+                                    </div>
+                                    <div class="tags"><span>#${category}</span></div>
+                                </div>
+                            `;
+                        }
+                        postGrid.appendChild(postCard);
+                    });
+                }
+            }
+
+            // --- Initial Load with URL Params ---
+            function applyUrlParameters() {
+                const params = new URLSearchParams(window.location.search);
+                const searchTerm = params.get('search');
+                const category = params.get('category');
+
+                if (searchTerm) {
+                    searchInput.value = searchTerm;
+                }
+
+                if (category) {
+                    categoryLinks.forEach(link => {
+                        link.classList.remove('active');
+                        if (link.dataset.category === category) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+
+                // Initial filter based on URL params
+                filterAndSearch();
+            }
+
+            // --- 데이터 로드 및 초기 렌더링 ---
+            async function loadAndRenderPosts() {
+                try {
+                    const snapshot = await db.collection("posts").orderBy("createdAt", "desc").get();
+                    allPosts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    // Instead of rendering all posts, apply filters from URL right away
+                    applyUrlParameters();
+                } catch (error) {
+                    console.error("Error fetching or rendering posts:", error);
+                    postGrid.innerHTML = '<p>게시물을 불러오는 데 실패했습니다. 자세한 내용은 콘솔을 확인하세요.</p>';
+                }
+            }
+
+            await loadAndRenderPosts();
+            
+            // --- 사이드바 리사이즈 기능 ---
+            const resizer = document.getElementById('resizer');
+            const sidebar = document.getElementById('sidebar');
+
+            const savedSidebarWidth = localStorage.getItem('sidebarWidth');
+            if (savedSidebarWidth) { sidebar.style.flexBasis = savedSidebarWidth; }
+
+            const resize = (e) => {
+                const newWidth = e.clientX - sidebar.getBoundingClientRect().left;
+                sidebar.style.flexBasis = `${newWidth}px`;
+            };
+
+            const stopResize = () => {
+                document.removeEventListener('mousemove', resize);
+                document.removeEventListener('mouseup', stopResize);
+                document.body.classList.remove('is-resizing');
+                localStorage.setItem('sidebarWidth', sidebar.style.flexBasis);
+            };
+
+            resizer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                document.addEventListener('mousemove', resize);
+                document.addEventListener('mouseup', stopResize);
+                document.body.classList.add('is-resizing');
+            });
+            
+            // --- 필터링 및 검색 기능 ---
+
+            function filterAndSearch() {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                const activeCategory = document.querySelector('.category-link.active').dataset.category;
+
+                const filteredPosts = allPosts.filter(post => {
+                    const categoryMatch = activeCategory === 'all' || post.category === activeCategory;
+                    const searchMatch = searchTerm === '' ||
+                        (post.title && post.title.toLowerCase().includes(searchTerm)) ||
+                        (post.content && post.content.toLowerCase().includes(searchTerm)) ||
+                        (post.author && post.author.toLowerCase().includes(searchTerm)) ||
+                        (post.category && post.category.toLowerCase().includes(searchTerm));
+                    return categoryMatch && searchMatch;
+                });
+                renderPosts(filteredPosts);
+            }
+
+            categoryLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    categoryLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    filterAndSearch();
+                });
+            });
+            
+            // 검색 이벤트 핸들러
+            searchButton.addEventListener('click', filterAndSearch);
+            searchInput.addEventListener('keypress', (e) => { // 엔터키 검색
+                if (e.key === 'Enter') {
+                    filterAndSearch();
+                }
+            });
+
+            // --- Post Card Click Event (Event Delegation) ---
+            postGrid.addEventListener('click', (e) => {
+                const card = e.target.closest('.post-card');
+                if (card) {
+                    const postId = card.dataset.id; // This is now the Firestore ID
+                    window.location.href = `post.html?id=${postId}`;
+                }
+            });
+
+            // --- View Toggler ---
+            const postListContainer = document.getElementById('post-list');
+            const gridViewBtn = document.getElementById('grid-view-btn');
+            const listViewBtn = document.getElementById('list-view-btn');
+
+            const setView = (view) => {
+                if (view === 'list') {
+                    postListContainer.classList.remove('post-grid');
+                    postListContainer.classList.add('post-list-view');
+                    listViewBtn.classList.add('active');
+                    gridViewBtn.classList.remove('active');
+                    localStorage.setItem('postView', 'list');
+                } else {
+                    postListContainer.classList.remove('post-list-view');
+                    postListContainer.classList.add('post-grid');
+                    gridViewBtn.classList.add('active');
+                    listViewBtn.classList.remove('active');
+                    localStorage.setItem('postView', 'grid');
+                }
+                // Re-render posts with the correct view template
+                filterAndSearch();
+            };
+
+            gridViewBtn.addEventListener('click', () => setView('grid'));
+            listViewBtn.addEventListener('click', () => setView('list'));
+
+            // Set initial view from localStorage
+            const savedView = localStorage.getItem('postView');
+            if (savedView) {
+                setView(savedView);
+            }
+
+            // Iframe Auto Resize using postMessage
+            const sendHeight = () => {
+                const height = document.documentElement.scrollHeight;
+                window.parent.postMessage({ type: 'resize', height: height }, '*');
+            };
+
+            const resizeObserver = new ResizeObserver(sendHeight);
+            resizeObserver.observe(document.body);
+            window.addEventListener('load', sendHeight);
+        });
+    </script>
+</body>
+</html>

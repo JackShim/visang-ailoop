@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visang AI Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #6a71f6;
+            --secondary-color: #00b5e2;
+            --bg-color: #f8f9fa;
+            --text-main: #2b2b2b;
+            --text-sub: #666666;
+            --header-height: 80px;
+            --menu-height: 60px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Noto Sans KR', sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-main); 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            overflow-y: auto; /* Allow body scroll */
+        }
+
+        /* --- Header Area --- */
+        .header {
+            height: var(--header-height);
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            z-index: 100;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        /* Left side placeholder to balance the layout (optional) */
+        .header-left {
+            width: 200px; 
+        }
+
+        /* Center Logo */
+        .header-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .main-logo-text {
+            font-size: 28px;
+            font-weight: 900;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+            text-transform: uppercase;
+        }
+
+        /* Right User Info */
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            width: 200px;
+            justify-content: flex-end;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e0e0e0, #f5f5f5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .coin-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 215, 0, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .coin-icon {
+            width: 20px;
+            height: 20px;
+            background: #FFD700;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .coin-amount {
+            font-weight: 700;
+            color: #d4a000;
+            font-size: 14px;
+        }
+
+        /* --- Menu Area --- */
+        .nav-menu {
+            height: var(--menu-height);
+            background: #ffffff;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 0 20px;
+            overflow-x: auto;
+            flex-shrink: 0;
+        }
+
+        .nav-item {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-sub);
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .nav-item:hover {
+            background: rgba(0,0,0,0.03);
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(90deg, rgba(106, 113, 246, 0.1), rgba(0, 181, 226, 0.1));
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        /* --- Content Area --- */
+        .content-area {
+            width: 100%;
+            min-height: calc(100vh - var(--header-height) - var(--menu-height)); /* Fill remaining space initially */
+            position: relative;
+            background: #f0f2f5;
+        }
+
+        iframe {
+            width: 100%;
+            min-height: 100%;
+            border: none;
+            display: block;
+            overflow: hidden; /* Hide iframe scrollbar */
+        }
+
+        /* --- Loading Dimmer --- */
+        .loading-dim {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            backdrop-filter: blur(5px);
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #e0e0e0;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <!-- Empty for balance -->
+        </div>
+        <div class="header-center">
+            <div class="main-logo-text">VISANG AI 마켓</div>
+        </div>
+        <div class="header-right">
+            <div class="user-info">
+                <span>김비상</span>
+                <div class="user-avatar">👤</div>
+            </div>
+            <div class="coin-info">
+                <div class="coin-icon">C</div>
+                <span class="coin-amount">1,250</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Menu -->
+    <nav class="nav-menu">
+        <div class="nav-item active" onclick="loadPage(this, './ai_market/index.html')">AI Community</div>
+        <div class="nav-item" onclick="loadPage(this, './visanglife/index.html')">비상생활</div>
+        <div class="nav-item" onclick="loadPage(this, './image_gallery/index.html')">AI 이미지</div>
+        <div class="nav-item" onclick="loadPage(this, './ai_video_hub/home-ver2.5.html')">AI 영상</div>
+        <div class="nav-item" onclick="loadPage(this, './visang-market-ai/visang-market-ai.html')">tool/prompt</div>
+        <div class="nav-item" onclick="loadPage(this, './club/index.html')">AI 소모임</div>
+    </nav>
+
+    <!-- Main Content (Iframe) -->
+    <main class="content-area">
+        <div id="loadingDim" class="loading-dim" style="display: none;">
+            <div class="spinner"></div>
+        </div>
+        <iframe id="mainFrame" src="./ai_market/index.html" title="Content Frame" scrolling="no"></iframe>
+    </main>
+
+    <script>
+        function loadPage(element, url) {
+            // Update active menu style
+            const items = document.querySelectorAll('.nav-item');
+            items.forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+
+            // Show dimmer
+            document.getElementById('loadingDim').style.display = 'flex';
+
+            // Load content into iframe
+            const frame = document.getElementById('mainFrame');
+            // Reset height to allow shrinking before new content loads
+            frame.style.height = '100%'; 
+            frame.src = url;
+        }
+
+        const frame = document.getElementById('mainFrame');
+        const loadingDim = document.getElementById('loadingDim');
+
+        // Handle resize messages from iframe (for cross-origin/local file support)
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'resize') {
+                // Hide dimmer when we receive a resize message (implies content loaded)
+                loadingDim.style.display = 'none';
+                
+                if (frame) {
+                    const newHeight = e.data.height;
+                    // Filter out very small height values that might occur during initial load
+                    if (newHeight > 150) {
+                        // Add a small buffer to prevent scrollbars
+                        frame.style.height = (newHeight + 20) + 'px';
+                    }
+                }
+            }
+        });
+
+        frame.onload = function() {
+            // Hide dimmer
+            loadingDim.style.display = 'none';
+
+            try {
+                // Attempt to resize iframe to fit content
+                // Note: This will only work for same-origin content (or local files in same directory in some browsers)
+                const doc = frame.contentDocument || frame.contentWindow.document;
+                
+                if (doc) {
+                    // Adjust height
+                    const newHeight = doc.documentElement.scrollHeight || doc.body.scrollHeight;
+                    // Add a little buffer to prevent scrollbar flickering
+                    frame.style.height = (newHeight + 20) + 'px';
+                    
+                    // Optional: If using file protocol or if the above doesn't trigger on dynamic updates,
+                    // we might need a MutationObserver inside the iframe, but we can't easily inject that without modifying sub-files.
+                    // This one-time resize on load is the best we can do from the parent without modifying children.
+                }
+            } catch (e) {
+                console.log("Auto-resize failed due to cross-origin restrictions. Iframe will use default height.");
+            }
+        };
+        
+        // Initial load logic to ensure height is set for the first page
+        window.addEventListener('load', function() {
+             // Manually trigger onload logic for the initial source if needed, 
+             // though iframe.onload usually fires for the initial src too.
+        });
+    </script>
+</body>
+</html>

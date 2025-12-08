@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>VISANG AI Video Hub | Design Updates</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            visang: {
+              main: '#00b5e2',
+              sub: '#6a71f6',
+              navy: '#003057',
+              bg: '#f8f9fa',
+              surface: '#ffffff',
+            }
+          },
+          fontFamily: {
+            sans: ['Noto Sans KR', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+          },
+          boxShadow: {
+            'soft': '0 8px 30px rgba(0, 0, 0, 0.04)',
+            'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+            'panel': '0 20px 50px -12px rgba(0, 0, 0, 0.25)',
+          },
+          borderRadius: {
+            '4xl': '32px',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { cursor: none !important; }
+    .cursor-dot {
+      width: 10px; height: 10px; background-color: #00ff88; border-radius: 50%;
+      position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;
+      transform: translate(-50%, -50%); transition: width 0.3s, height 0.3s, transform 0.1s;
+      mix-blend-mode: difference;
+    }
+    
+    html, body {
+        height: auto !important;
+        min-height: auto !important;
+        overflow-y: auto !important; /* Ensure scrollbar appears if needed inside, but we want it hidden by iframe usually */
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fadeIn { 
+      from { opacity: 0; transform: translateY(20px) scale(0.98); } 
+      to { opacity: 1; transform: translateY(0) scale(1); } 
+    }
+
+    .slide-down { animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .text-gradient {
+      background: linear-gradient(135deg, #00b5e2, #6a71f6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-size: 200% 200%; animation: gradientMove 3s ease infinite;
+    }
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }
+    }
+
+    .abstract-3d {
+      background: radial-gradient(circle at 15% 0%, rgba(255, 255, 255, 0.95), transparent 60%), linear-gradient(145deg, #00b5e2, #6a71f6);
+      box-shadow: 0 26px 48px rgba(15, 23, 42, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+      position: relative; overflow: hidden;
+    }
+    .abstract-3d::before, .abstract-3d::after {
+      content: ""; position: absolute; border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.13); backdrop-filter: blur(18px);
+    }
+    .abstract-3d::before { width: 130px; height: 76px; top: 32px; left: 26px; }
+    .abstract-3d::after { width: 90px; height: 52px; bottom: 32px; right: 24px; }
+  </style>
+</head>
+<body class="bg-visang-bg text-gray-800 antialiased flex flex-col">
+
+  <div class="cursor-dot"></div>
+
+  <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 relative">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center gap-3 cursor-pointer group" onclick="app.router('home')">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-visang-main to-visang-sub shadow-lg flex items-center justify-center text-white font-bold text-xs group-hover:scale-110 transition-transform">V</div>
+          <div><h1 class="font-bold text-lg text-gray-900 leading-tight tracking-tight">AI Video Hub</h1></div>
+        </div>
+
+        <nav class="hidden md:flex items-center gap-2 bg-gray-100/50 p-1 rounded-full">
+          <button onclick="app.router('home')" id="nav-home" class="nav-item px-5 py-1.5 rounded-full text-sm font-medium transition-all duration-300">홈</button>
+          <button onclick="app.router('explore')" id="nav-explore" class="nav-item px-5 py-1.5 rounded-full text-sm font-medium transition-all duration-300">탐색</button>
+          <button onclick="app.router('library')" id="nav-library" class="nav-item px-5 py-1.5 rounded-full text-sm font-medium transition-all duration-300">영상관</button>
+        </nav>
+
+        <div class="flex items-center gap-3 relative">
+          <button onclick="app.router('upload')" class="hidden sm:flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-gray-800 hover:shadow-xl hover:-translate-y-0.5 transition-all">
+            <span class="text-lg leading-none mb-0.5">+</span> 생성
+          </button>
+          
+          <div class="h-6 w-px bg-gray-200 mx-1"></div>
+          
+          <button onclick="app.router('guide')" id="nav-guide" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-visang-main transition-colors" title="이용 가이드">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </button>
+          
+          <button onclick="app.toggleNotificationPanel()" id="nav-noti" class="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-visang-main transition-colors relative" title="알림">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+            <span class="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+          </button>
+          
+          <button onclick="app.router('mypage')" id="nav-mypage" class="w-10 h-10 rounded-full bg-gradient-to-r from-visang-navy to-gray-800 p-[2px] cursor-pointer hover:shadow-lg transition-all" title="마이페이지">
+             <div class="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
+                <span class="font-bold text-xs text-gray-800">DY</span>
+             </div>
+          </button>
+
+          <div id="notification-panel" class="hidden absolute top-14 right-0 w-80 bg-white/90 backdrop-blur-xl border border-gray-100 rounded-3xl shadow-panel z-50 overflow-hidden slide-down">
+             <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-white/50">
+                <h3 class="font-bold text-gray-900 text-sm">알림 센터</h3>
+                <span class="text-xs text-visang-main cursor-pointer">모두 읽음</span>
+             </div>
+             <div class="max-h-96 overflow-y-auto no-scrollbar" id="noti-list"></div>
+             <div class="p-3 bg-gray-50/80 text-center border-t border-gray-100">
+                <button class="text-xs text-gray-500 hover:text-gray-800">전체 알림 보기</button>
+             </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="app-container" class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full h-full">
+    </main>
+
+  <footer class="bg-white border-t border-gray-200 mt-auto">
+    <div class="max-w-7xl mx-auto px-6 py-8 flex justify-between items-center text-xs text-gray-400">
+      <p>© 2025 VISANG EDUCATION · AI Video Hub</p>
+      <div>문의: 경영관리cell 김도이CP</div>
+    </div>
+  </footer>
+
+  <script>
+    // --- 통합 데이터 (변경 없음) ---
+    const DB = {
+      videos: [
+        { 
+          id: 1, 
+          title: "AI 캐릭터로 소개하는 초등 수학 도형 개념", 
+          brand: "수학", 
+          purpose: "학습 콘텐츠", 
+          type: "풀 AI (Gen AI)", 
+          views: 1240, 
+          date: "2024-05-20", 
+          uploader: "김비상", 
+          tags: ["Pika", "애니메이션", "3D"], 
+          tool: "Midjourney + Pika", 
+          model: "MJ v6, Pika 1.0", 
+          desc: "초등 3–4학년 대상 도형 기본 개념 정리 AI 애니메이션.", 
+          prompt: "[초등 수학] 도형 개념을 20초 이내 애니메이션으로 설명하는 영상. 3D character animation, cute lighting.", 
+          negative: "dark, scary", 
+          ratio: "16:9", 
+          color: "from-yellow-400 to-orange-500",
+          image: "Gemini_Generated_Image_pqlns3pqlns3pqln.png", 
+          videoSrc: "동적_영상_제작_도형과_한국어.mp4", 
+          comments: [{ user: "박팀장", text: "캐릭터 움직임이 자연스럽네요." }] 
+        },
+        { 
+          id: 2, 
+          title: "영어 회화 챌린지 Reels (실사+AI)", 
+          brand: "영어", 
+          purpose: "SNS 홍보", 
+          type: "실사 + AI 합성", 
+          views: 890, 
+          date: "2024-05-19", 
+          uploader: "이영어", 
+          tags: ["Runway", "SNS", "Viral"], 
+          tool: "Runway Gen-2", 
+          model: "Gen-2", 
+          desc: "실사 촬영본에 유화 스타일 트랜스퍼 적용.", 
+          prompt: "[영어] 실사 인물 배경을 유화 스타일로 변환. Oil painting style.", 
+          negative: "photo realistic, noisy", 
+          ratio: "9:16", 
+          color: "from-purple-500 to-pink-500", 
+          image: "Gemini_Generated_Image_wu3gjswu3gjswu3g.png", 
+          comments: [] 
+        },
+        { 
+          id: 3, 
+          title: "유아 그림책 스토리텔링 애니메이션", 
+          brand: "유아", 
+          purpose: "학습 콘텐츠", 
+          type: "풀 AI (Gen AI)", 
+          views: 2100, 
+          date: "2024-05-18", 
+          uploader: "박유아", 
+          tags: ["Sora", "동화"], 
+          tool: "Sora (Alpha)", 
+          model: "Sora v1", 
+          desc: "수채화풍 그림책 이미지 영상화.", 
+          prompt: "Soft watercolor style animation of a children's storybook.", 
+          negative: "sharp edges, 3d render", 
+          ratio: "1:1", 
+          color: "from-green-400 to-emerald-600",
+          image: "Gemini_Generated_Image_labl99labl99labl.png", 
+          comments: [] 
+        },
+        { 
+          id: 4, 
+          title: "학습 리포트 UI 튜토리얼", 
+          brand: "플랫폼", 
+          purpose: "제품/서비스 소개", 
+          type: "모션그래픽", 
+          views: 560, 
+          date: "2024-05-15", 
+          uploader: "최플랫폼", 
+          tags: ["Motion", "UI/UX"], 
+          tool: "After Effects + AI", 
+          model: "MJ v5.2", 
+          desc: "플랫폼 학습 결과 리포트 화면 모션 강조.", 
+          prompt: "Futuristic tablet UI displaying a vibrant learning report.", 
+          negative: "messy UI", 
+          ratio: "16:9", 
+          color: "from-blue-500 to-cyan-400", 
+          image: "Gemini_Generated_Image_7lctqz7lctqz7lct.png", 
+          comments: [] 
+        },
+        { 
+          id: 5, 
+          title: "외국인을 위한 한국어 인사말", 
+          brand: "한국어", 
+          purpose: "학습 콘텐츠", 
+          type: "모션그래픽", 
+          views: 3200, 
+          date: "2024-05-10", 
+          uploader: "강한국", 
+          tags: ["K-Culture", "Typo"], 
+          tool: "Illustrator + AI", 
+          model: "Firefly", 
+          desc: "키네틱 타이포그래피 활용 한국어 인사말.", 
+          prompt: "Kinetic typography of Korean Hangul, vibrant colors.", 
+          negative: "static, dull", 
+          ratio: "16:9", 
+          color: "from-red-400 to-rose-600", 
+          image: "Gemini_Generated_Image_wdq7mrwdq7mrwdq7.png", 
+          comments: [] 
+        },
+        { 
+          id: 6, 
+          title: "2025 브랜드 캠페인 티저", 
+          brand: "캠페인", 
+          purpose: "브랜딩/광고", 
+          type: "풀 AI (Gen AI)", 
+          views: 4500, 
+          date: "2024-05-01", 
+          uploader: "홍보팀", 
+          tags: ["Cinematic", "Abstract"], 
+          tool: "Midjourney v6", 
+          model: "MJ v6", 
+          desc: "추상적인 AI 그래픽과 타이포그래피 조화.", 
+          prompt: "Abstract AI graphic with dynamic typography, cinematic feel.", 
+          negative: "low resolution", 
+          ratio: "21:9", 
+          color: "from-indigo-600 to-purple-800", 
+          image: "Gemini_Generated_Image_291upx291upx291u.png", 
+          comments: [] 
+        }
+      ],
+      userProfile: {
+        name: "김도이",
+        team: "경영관리Core · 경영관리cell",
+        avatar: "DY",
+        stats: { uploads: 6, likes: 345, saved: 2 },
+        savedPrompts: [
+           { id: 101, title: "수학 도형 3D 캐릭터 프롬프트", prompt: "3D cute character explaining math geometry, pixar style...", tags: ["수학", "캐릭터"] },
+           { id: 102, title: "감성적인 오일 페인팅 필터", prompt: "Oil painting style transformation of a talking person...", tags: ["영어", "필터"] }
+        ]
+      },
+      notifications: [
+        { id: 1, type: "like", user: "박팀장", text: "님이 회원님의 영상을 좋아합니다.", time: "방금 전", read: false },
+        { id: 2, type: "comment", user: "이영어", text: "님이 댓글을 남겼습니다: '프롬프트 공유좀요'", time: "1시간 전", read: false },
+        { id: 3, type: "system", user: "System", text: "Sora v2 사용 가이드가 업데이트 되었습니다.", time: "어제", read: true },
+        { id: 4, type: "mention", user: "최플랫폼", text: "님이 멘션했습니다: '@김지은 확인부탁드려요'", time: "2일 전", read: true }
+      ],
+      options: {
+        brands: ["영어", "수학", "유아", "플랫폼", "한국어", "캠페인"],
+        purposes: ["학습 콘텐츠", "SNS 홍보", "제품/서비스 소개", "브랜딩/광고"],
+        types: ["풀 AI (Gen AI)", "실사 + AI 합성", "모션그래픽"]
+      }
+    };
+
+    // --- 앱 로직 ---
+    const app = {
+      state: {
+        currentTab: 'home',
+        searchQuery: '',
+        filters: { brand: 'All', purpose: 'All', type: 'All' },
+        sortBy: 'newest',
+        currentVideoComments: [],
+        showAdvancedUpload: false,
+        mypageTab: 'uploads', 
+        showNotiPanel: false
+      },
+
+      init() {
+        this.router('home');
+      },
+
+      router(tabName, param = null) {
+        this.state.currentTab = tabName;
+        this.updateNavUI();
+        if(this.state.showNotiPanel) this.toggleNotificationPanel();
+
+        const container = document.getElementById('app-container');
+        container.innerHTML = ''; 
+        container.classList.remove('fade-in');
+        void container.offsetWidth; 
+        container.classList.add('fade-in');
+
+        // 메인 컨테이너 스타일 초기화 (라이브러리 탭일 때만 다르게 적용하기 위해)
+        container.className = "flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full h-full";
+
+        if (tabName === 'home') this.renderHome(container);
+        else if (tabName === 'explore') this.renderExplore(container);
+        else if (tabName === 'upload') this.renderUpload(container);
+        else if (tabName === 'library') this.renderLibrary(container); // 라이브러리 탭 처리
+        else if (tabName === 'detail') this.renderDetail(container, param);
+        else if (tabName === 'mypage') this.renderMyPage(container);
+        else if (tabName === 'guide') this.renderGuide(container);
+      },
+
+      updateNavUI() {
+        document.querySelectorAll('.nav-item').forEach(el => {
+          el.className = 'nav-item px-5 py-1.5 rounded-full text-sm font-medium text-gray-500 hover:text-gray-900 hover:bg-white transition-all duration-300';
+        });
+        
+        ['nav-guide', 'nav-mypage'].forEach(id => {
+             const btn = document.getElementById(id);
+             if(btn) btn.classList.remove('text-visang-main', 'bg-gray-100');
+        });
+
+        if (['home', 'explore', 'library'].includes(this.state.currentTab)) {
+            const activeBtn = document.getElementById(`nav-${this.state.currentTab}`);
+            if(activeBtn) activeBtn.className = 'nav-item px-5 py-1.5 rounded-full text-sm font-bold text-visang-main bg-white shadow-sm transition-all duration-300';
+        } else if (['guide', 'mypage'].includes(this.state.currentTab)) {
+             const activeBtn = document.getElementById(`nav-${this.state.currentTab}`);
+             if(activeBtn && this.state.currentTab !== 'mypage') {
+                 activeBtn.classList.add('text-visang-main', 'bg-gray-100');
+             }
+        }
+      },
+
+      // ★★★ 1. Home (수정됨: 3개 카드에 그라데이션 적용) ★★★
+      renderHome(container) {
+        const featuredVideo = DB.videos[0];
+        const trendingVideos = DB.videos.slice(1, 4);
+        const totalCount = DB.videos.length.toLocaleString();
+
+        container.innerHTML = `
+          <div class="space-y-10">
+            <div class="flex flex-col md:flex-row justify-between items-end gap-4 mt-2">
+               <div><div class="text-sm font-medium text-gray-500 mb-1">2025년 12월 9일 · 월요일</div><h1 class="text-4xl md:text-5xl font-bold text-gray-900 tracking-tight leading-tight">Hello, Creator. <br/><span class="text-gradient">Ready to Inspire?</span></h1></div>
+               <div class="hidden md:block text-right"><div class="text-sm text-gray-400">누적 영상 수</div><div class="text-3xl font-bold text-gray-900">${totalCount} <span class="text-sm text-green-500 font-medium">▲ 2</span></div></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 md:grid-rows-2 gap-5 h-auto md:h-[500px]">
+               <div class="md:col-span-2 md:row-span-2 relative group cursor-pointer rounded-4xl overflow-hidden shadow-soft" onclick="app.router('detail', ${featuredVideo.id})">
+                  <img src="${featuredVideo.image}" alt="${featuredVideo.title}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                  <div class="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors"></div>
+                  <div class="absolute inset-0 p-8 flex flex-col justify-between text-white">
+                     <div class="flex justify-between items-start"><span class="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold border border-white/20">🔥 실시간 인기</span><div class="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0"><div class="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent ml-1"></div></div></div>
+                     <div><h2 class="text-3xl font-bold mb-2 leading-tight drop-shadow-md">${featuredVideo.title}</h2><p class="text-white/80 text-sm line-clamp-2 max-w-md">${featuredVideo.desc}</p></div>
+                  </div>
+               </div>
+
+               <div class="bg-gradient-to-br from-orange-400 to-pink-500 rounded-4xl p-6 shadow-soft flex flex-col justify-between group cursor-pointer hover:shadow-xl transition-all hover:-translate-y-1 text-white" onclick="app.router('upload')">
+                  <div class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl group-hover:bg-white group-hover:text-pink-500 transition-colors">📤</div>
+                  <div><div class="text-lg font-bold">영상 업로드</div><div class="text-xs text-white/80 mt-1">제작한 AI 영상 공유하기</div></div>
+               </div>
+
+               <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-4xl p-6 shadow-soft flex flex-col justify-between group cursor-pointer hover:shadow-xl transition-all hover:-translate-y-1 text-white" onclick="app.router('explore')">
+                  <div class="flex justify-between items-start text-white/80"><div class="text-2xl">✨</div><div class="text-xs font-mono border border-white/30 px-2 py-0.5 rounded">추천</div></div>
+                  <div><div class="text-lg font-bold">프롬프트 도서관</div><div class="text-xs text-white/80 mt-1">500개 이상의 스타일 탐색</div></div>
+               </div>
+
+               <div class="md:col-span-2 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-4xl p-8 shadow-soft flex items-center justify-between relative overflow-hidden text-white">
+                  <div class="relative z-10"><div class="text-xs font-bold text-white/80 uppercase tracking-wider mb-2">주간 인사이트</div><div class="text-xl font-bold">"Pika 1.0" 사용량이 <br/>지난주보다 40% 늘었어요.</div></div>
+                  <div class="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-4xl">🚀</div>
+                  <div class="absolute right-0 bottom-0 w-64 h-64 bg-gradient-to-tl from-white/10 to-transparent rounded-tl-full opacity-50"></div>
+               </div>
+            </div>
+            <div>
+               <div class="flex justify-between items-end mb-6"><h3 class="text-xl font-bold text-gray-900">최신 업데이트</h3><button onclick="app.router('explore')" class="text-sm font-medium text-gray-400 hover:text-visang-main transition-colors">전체 보기 →</button></div>
+               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  ${trendingVideos.map(v => `
+                     <div class="group cursor-pointer" onclick="app.router('detail', ${v.id})">
+                        <div class="aspect-video rounded-3xl overflow-hidden relative mb-3 bg-gray-100 shadow-sm">
+                           <img src="${v.image}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                           <div class="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition-colors"></div>
+                           <div class="absolute bottom-3 right-3 bg-black/50 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-lg font-medium">${v.ratio === '9:16' ? '쇼츠' : '00:30'}</div>
+                        </div>
+                        <div class="px-1"><div class="flex items-center gap-2 mb-1"><span class="w-2 h-2 rounded-full bg-visang-main"></span><span class="text-xs font-bold text-gray-500 uppercase">${v.brand}</span></div><h4 class="font-bold text-gray-900 leading-snug group-hover:text-visang-main transition-colors">${v.title}</h4></div>
+                     </div>
+                  `).join('')}
+               </div>
+            </div>
+          </div>
+        `;
+      },
+
+      // ★★★ 2. Explore (수정됨: 폰트 키움 + 필터바 배경색 변경) ★★★
+      renderExplore(container) {
+        let result = DB.videos.filter(v => {
+            const matchBrand = this.state.filters.brand === 'All' || v.brand === this.state.filters.brand;
+            const matchPurpose = this.state.filters.purpose === 'All' || v.purpose === this.state.filters.purpose;
+            const matchType = this.state.filters.type === 'All' || v.type === this.state.filters.type;
+            const matchSearch = v.title.toLowerCase().includes(this.state.searchQuery.toLowerCase());
+            return matchBrand && matchPurpose && matchType && matchSearch;
+        });
+        if (this.state.sortBy === 'newest') result.sort((a, b) => new Date(b.date) - new Date(a.date));
+        else if (this.state.sortBy === 'views') result.sort((a, b) => b.views - a.views);
+
+        container.innerHTML = `
+          <div class="space-y-6 mb-8">
+            <div class="flex flex-col md:flex-row justify-between items-end gap-4 border-b border-gray-200 pb-6">
+                <div>
+                   <h2 class="text-4xl font-extrabold mb-2 text-gray-900 tracking-tight">영상 탐색</h2>
+                   <p class="text-gray-500 text-sm">원하는 조건으로 AI 영상 레퍼런스를 찾아보세요.</p>
+                </div>
+                <div class="relative w-full md:w-80"><input type="text" placeholder="제목 또는 태그 검색..." value="${this.state.searchQuery}" oninput="app.setSearch(this.value)" class="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-200 bg-white text-sm focus:border-visang-main focus:ring-1 focus:ring-visang-main outline-none transition-shadow"><svg class="w-4 h-4 text-gray-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg></div>
+            </div>
+            
+            <div class="bg-slate-100 p-6 rounded-3xl border border-gray-200 shadow-inner">
+               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="flex flex-col gap-1.5"><label class="text-xs font-bold text-gray-500 ml-1">브랜드 (Brand)</label><select onchange="app.setFilter('brand', this.value)" class="w-full px-3 py-3 rounded-xl border border-gray-200 text-sm focus:border-visang-main outline-none bg-white hover:border-visang-main transition-colors cursor-pointer shadow-sm"><option value="All">전체 브랜드</option>${DB.options.brands.map(opt => `<option value="${opt}" ${this.state.filters.brand === opt ? 'selected' : ''}>${opt}</option>`).join('')}</select></div>
+                  <div class="flex flex-col gap-1.5"><label class="text-xs font-bold text-gray-500 ml-1">영상 목적 (Purpose)</label><select onchange="app.setFilter('purpose', this.value)" class="w-full px-3 py-3 rounded-xl border border-gray-200 text-sm focus:border-visang-main outline-none bg-white hover:border-visang-main transition-colors cursor-pointer shadow-sm"><option value="All">전체 목적</option>${DB.options.purposes.map(opt => `<option value="${opt}" ${this.state.filters.purpose === opt ? 'selected' : ''}>${opt}</option>`).join('')}</select></div>
+                  <div class="flex flex-col gap-1.5"><label class="text-xs font-bold text-gray-500 ml-1">제작 방식 (Type)</label><select onchange="app.setFilter('type', this.value)" class="w-full px-3 py-3 rounded-xl border border-gray-200 text-sm focus:border-visang-main outline-none bg-white hover:border-visang-main transition-colors cursor-pointer shadow-sm"><option value="All">전체 방식</option>${DB.options.types.map(opt => `<option value="${opt}" ${this.state.filters.type === opt ? 'selected' : ''}>${opt}</option>`).join('')}</select></div>
+               </div>
+            </div>
+          </div>
+          <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"><div class="flex items-center gap-2"><span class="text-sm text-gray-500">총 <strong class="text-visang-main">${result.length}</strong>개의 영상</span>${(this.state.filters.brand !== 'All' || this.state.filters.purpose !== 'All' || this.state.filters.type !== 'All') ? `<button onclick="app.resetFilters()" class="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 border-l border-gray-300 pl-2">↺ 필터 초기화</button>` : ''}</div><div class="flex items-center gap-2"><span class="text-xs font-medium text-gray-400">Sort by:</span><select onchange="app.setSort(this.value)" class="pl-2 pr-6 py-1 rounded-md border-none text-sm font-bold text-gray-700 bg-transparent focus:ring-0 cursor-pointer hover:text-visang-main"><option value="newest" ${this.state.sortBy === 'newest' ? 'selected' : ''}>✨ 최신순</option><option value="views" ${this.state.sortBy === 'views' ? 'selected' : ''}>🔥 조회순</option></select></div></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">${result.length > 0 ? result.map(v => this.createVideoCard(v)).join('') : `<div class="col-span-3 text-center py-20 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400">조건에 맞는 영상이 없습니다.</div>`}</div>
+        `;
+      },
+
+      // --- 3. Upload (유지) ---
+      renderUpload(container) {
+        container.innerHTML = `
+          <div class="max-w-3xl mx-auto"><h2 class="text-2xl font-bold mb-2">영상 업로드</h2><p class="text-sm text-gray-500 mb-8">팀원들이 참고할 수 있도록 생성 정보를 상세히 기록해주세요.</p><section class="upload-card bg-white p-8 rounded-2xl shadow-sm border border-gray-100"><div class="dropzone border-2 border-dashed border-gray-200 rounded-xl p-10 text-center hover:border-visang-main hover:bg-blue-50 transition-colors cursor-pointer mb-8"><div class="drop-main-text text-lg font-bold text-gray-700 mb-1">영상 파일을 여기로 끌어오세요</div><div class="drop-sub-text text-xs text-gray-400 mb-4">(MP4, MOV / 최대 1GB)</div><button class="btn-outline px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-white hover:border-visang-main hover:text-visang-main transition-all">파일 선택하기</button></div><div class="upload-layout space-y-8"><div class="form-section space-y-5"><div class="form-section-title font-bold text-lg text-gray-900 border-b border-gray-100 pb-2">기본 정보</div><div class="form-row"><label class="form-label block text-sm font-bold text-gray-700 mb-2">영상 제목 <span class="text-red-500">*</span></label><input class="form-input w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-visang-main outline-none transition-shadow" placeholder="예) AI 캐릭터로 설명하는 초등 수학 도형 개념"></div><div class="form-row"><label class="form-label block text-sm font-bold text-gray-700 mb-2">설명</label><textarea class="form-textarea w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-visang-main outline-none transition-shadow resize-none h-24" placeholder="영상의 목적, 대상 학년, 채널(유튜브/SNS/플랫폼) 등을 간단히 남겨주세요."></textarea></div><div class="form-row"><label class="form-label block text-sm font-bold text-gray-700 mb-2">태그</label><div class="tag-input flex flex-wrap gap-2 mb-1"><span class="tag-chip bg-visang-main/10 text-visang-main px-3 py-1 rounded-full text-xs font-bold">초등</span><span class="tag-chip bg-visang-main/10 text-visang-main px-3 py-1 rounded-full text-xs font-bold">도형</span><input placeholder="# 태그 입력 후 Enter" class="flex-1 min-w-[120px] outline-none border-b border-gray-200 text-sm py-1 focus:border-visang-main"></div><div class="hint text-xs text-gray-400">브랜드명, 학년, 단원, 포맷(쇼츠/튜토리얼) 등을 태그로 추가하면 검색이 쉬워집니다.</div></div><div class="form-section-title font-bold text-lg text-gray-900 border-b border-gray-100 pb-2 mt-8">메타 정보</div><div class="meta-grid grid grid-cols-1 md:grid-cols-2 gap-5"><div class="form-row"><label class="form-label block text-sm font-bold text-gray-700 mb-2">브랜드 <span class="text-red-500">*</span></label><select class="form-select w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-visang-main outline-none bg-white"><option>선택하세요</option><option>영어</option><option>수학</option><option>유아</option><option>중등·고등</option><option>한국어(외국인)</option><option>교수학습·플랫폼</option></select></div><div class="form-row"><label class="form-label block text-sm font-bold text-gray-700 mb-2">영상 목적 <span class="text-red-500">*</span></label><select class="form-select w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-visang-main outline-none bg-white"><option>선택하세요</option><option>학습 콘텐츠</option><option>SNS 홍보</option><option>교재·제품 소개</option><option>캠페인·광고</option><option>행사·세미나</option><option>내부 교육</option></select></div><div class="form-row"><label class="form-label block text-sm font-bold text-gray-700 mb-2">생성 방식</label><select class="form-select w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-visang-main outline-none bg-white"><option>선택하세요</option><option>실사 + AI</option><option>풀 AI</option><option>2D/애니 스타일</option><option>이미지→영상</option><option>AI 캐릭터</option></select></div><div class="form-row"><label class="form-label block text-sm font-bold text-gray-700 mb-2">주요 채널</label><select class="form-select w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-visang-main outline-none bg-white"><option>선택하세요</option><option>플랫폼(앱/웹)</option><option>유튜브</option><option>인스타그램</option><option>페이스북</option><option>내부 연수/세미나</option></select></div></div></div><div class="space-y-6"><div class="guide-card bg-blue-50/50 p-4 rounded-xl border border-blue-100"><div class="guide-title font-bold text-sm text-visang-navy mb-2 flex items-center gap-2">✅ 업로드 전 체크리스트</div><ul class="guide-list list-disc list-inside text-xs text-gray-600 space-y-1"><li>저작권에 문제가 없는 영상인지 확인했나요?</li><li>학생 얼굴이 포함된 경우, 사내 가이드라인에 따라 처리했나요?</li><li>브랜드·목적·생성 방식을 정확히 선택했나요?</li></ul></div><div class="guide-card"><div class="form-row mb-1"><label class="form-label block text-sm font-bold text-gray-700 mb-2">썸네일 이미지</label><div class="hint text-xs text-gray-400 mb-2">업로드 후 자동 생성된 썸네일을 교체할 수 있습니다.</div><div class="w-32 h-20 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center text-xs text-gray-400 cursor-pointer hover:bg-gray-200">이미지 변경</div></div></div><div class="advanced-toggle text-sm text-gray-600 bg-gray-50 p-3 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors" onclick="app.toggleAdvanced()"><strong>고급 정보</strong> · 프롬프트 / 사용 모델 / 툴 정보도 함께 남겨두면 다른 팀이 같은 스타일을 쉽게 재현할 수 있습니다. <span class="text-visang-main text-xs ml-1 font-bold" id="adv-toggle-text">[펼쳐보기]</span></div><div class="advanced-area hidden space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-100" id="advanced-area"><div class="form-row"><label class="form-label block text-sm font-bold text-gray-700 mb-2">사용 툴</label><input class="form-input w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-visang-main outline-none" placeholder="예) Runway Gen-2, Pika, Stable Video, CapCut 등"></div><div class="form-row"><label class="form-label block text-sm font-bold text-gray-700 mb-2">프롬프트 / 생성 설정</label><div class="prompt-box"><textarea class="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-visang-main outline-none font-mono text-sm h-32 resize-none" placeholder="[선택사항] 실제로 사용한 프롬프트, 씬 구분, 시드값, 해상도 등을 적어주세요."></textarea><div class="prompt-hint text-xs text-gray-400 mt-2">예) [초등 수학] 도형 개념을 20초 이내 애니메이션으로 설명하는 영상. 밝고 경쾌한 톤, 핵심 키워드는 자막으로 강조.</div></div></div></div></div></div><div class="upload-actions flex justify-end gap-3 mt-10 pt-6 border-t border-gray-100"><button class="btn-secondary px-6 py-2.5 bg-white border border-gray-300 text-gray-600 rounded-lg font-medium hover:bg-gray-50 transition-colors">임시 저장</button><button class="btn-primary px-6 py-2.5 bg-visang-main text-white rounded-lg font-bold hover:bg-cyan-600 shadow-md transition-colors" onclick="alert('업로드 완료! (데모)'); app.router('home');">업로드 완료하기</button></div></section></div>
+        `;
+      },
+
+      // ★★★ 4. Library (수정됨: 배경색 Dark + 16:9 와이드 비율) ★★★
+      renderLibrary(container) {
+          // 메인 컨테이너에 전체 화면 다크 배경 적용을 위해 클래스 조정
+          // (SPA 구조상 특정 탭만 body bg를 바꾸기 어려우므로, 컨테이너 자체를 꽉 채우는 방식으로 구현)
+          container.className = "flex-grow w-full h-[calc(100vh-64px)] bg-gray-900 overflow-hidden";
+          
+          const feedHTML = DB.videos.map(video => `
+            <div class="snap-center shrink-0 w-full h-full relative flex justify-center items-center bg-gray-900">
+                <div class="relative w-full max-w-5xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl">
+                    <img src="${video.image}" class="absolute inset-0 w-full h-full object-cover opacity-80">
+                    <div class="absolute inset-0 bg-black/20"></div>
+                    <div class="absolute z-10 p-6 rounded-full bg-white/20 backdrop-blur-md border border-white/30 cursor-pointer hover:scale-110 transition-transform hover:bg-white/30 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" onclick="alert('영상 재생 시뮬레이션')">
+                        <div class="w-0 h-0 border-t-[14px] border-t-transparent border-l-[24px] border-l-white border-b-[14px] border-b-transparent ml-1"></div>
+                    </div>
+                    
+                    <div class="absolute bottom-8 right-8 flex flex-col gap-4 z-20">
+                        <div class="flex flex-col items-center gap-1 cursor-pointer group transition-transform active:scale-95" onclick="alert('좋아요!')"><div class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center backdrop-blur-md border border-white/10 group-hover:bg-visang-main transition-colors text-white"><span class="text-2xl">❤️</span></div><span class="text-xs font-bold text-white drop-shadow-md">Like</span></div>
+                        <div class="flex flex-col items-center gap-1 cursor-pointer group transition-transform active:scale-95" onclick="app.openComments(${video.id})"><div class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center backdrop-blur-md border border-white/10 group-hover:bg-visang-main transition-colors text-white"><span class="text-2xl">💬</span></div><span class="text-xs font-bold text-white drop-shadow-md">Chat</span></div>
+                        <div class="flex flex-col items-center gap-1 cursor-pointer group transition-transform active:scale-95" onclick="app.router('detail', ${video.id})"><div class="w-12 h-12 bg-black/60 rounded-full flex items-center justify-center backdrop-blur-md border border-white/10 group-hover:bg-visang-main transition-colors text-white"><span class="text-2xl">ℹ️</span></div><span class="text-xs font-bold text-white drop-shadow-md">Info</span></div>
+                    </div>
+
+                    <div class="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-black/90 via-black/50 to-transparent text-white z-10 pointer-events-none">
+                        <div class="pointer-events-auto max-w-2xl">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="px-2.5 py-1 rounded bg-visang-main text-xs font-bold shadow-sm">${video.brand}</span>
+                                <span class="font-bold text-base shadow-black drop-shadow-md">@${video.uploader}</span>
+                            </div>
+                            <h3 class="text-2xl font-bold leading-snug mb-3 drop-shadow-md">${video.title}</h3>
+                            <div class="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-xl text-sm text-gray-100 font-mono cursor-pointer hover:bg-white/20 transition-colors inline-block" onclick="app.router('detail', ${video.id})">
+                                <span class="text-visang-main font-bold text-xs block mb-1">✨ Prompt Snippet</span>
+                                "${video.prompt.substring(0, 80)}..."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          `).join('');
+
+          container.innerHTML = `
+            <div class="w-full h-full relative">
+                <div id="shorts-feed" class="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar">
+                    ${feedHTML}
+                </div>
+                <div id="comment-drawer" class="absolute inset-x-0 bottom-0 h-[50%] bg-white rounded-t-3xl transform translate-y-full transition-transform duration-300 z-50 flex flex-col shadow-[0_-10px_60px_rgba(0,0,0,0.5)] max-w-5xl mx-auto">
+                    <div class="flex justify-between items-center p-4 border-b border-gray-100"><h3 class="font-bold text-gray-800 text-lg">댓글 <span id="comment-count" class="text-visang-main">0</span></h3><button onclick="app.closeComments()" class="p-2 text-gray-400 hover:text-gray-800 rounded-full hover:bg-gray-100 transition-colors">✕</button></div>
+                    <div id="comment-list" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50"></div>
+                    <div class="p-4 border-t border-gray-100 bg-white"><form onsubmit="app.addComment(event)" class="flex gap-2"><input type="text" id="comment-input" placeholder="따뜻한 댓글을 남겨주세요..." class="flex-1 px-5 py-3 rounded-full border border-gray-200 text-sm focus:outline-none focus:border-visang-main bg-gray-50 focus:bg-white transition-colors"><button type="submit" class="p-3 bg-visang-main text-white rounded-full w-12 h-12 flex items-center justify-center hover:bg-cyan-600 shadow-md transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg></button></form></div>
+                </div>
+            </div>
+          `;
+      },
+
+      // --- 5. Detail (유지) ---
+      renderDetail(container, id) {
+        // 메인 컨테이너 원복
+        container.className = "flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full h-full";
+
+        const video = DB.videos.find(v => v.id === id);
+        if(!video) return this.router('home');
+        
+        const playerContent = video.videoSrc 
+          ? `<video src="${video.videoSrc}" controls poster="${video.image}" class="absolute inset-0 w-full h-full object-cover bg-black"></video>`
+          : `
+             <img src="${video.image}" class="absolute inset-0 w-full h-full object-cover opacity-80">
+             <div class="absolute inset-0 bg-black/20"></div>
+             <div class="video-fake absolute inset-0 flex items-center justify-center">
+                <div class="video-play-btn w-20 h-20 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/50 cursor-pointer hover:scale-110 transition-transform">
+                    <div class="w-0 h-0 border-t-[10px] border-t-transparent border-l-[18px] border-l-white border-b-[10px] border-b-transparent ml-2"></div>
+                </div>
+             </div>
+            `;
+
+        container.innerHTML = `
+          <div class="mb-4"><button onclick="app.router('explore')" class="text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1">← 목록으로 돌아가기</button></div>
+          <section class="main-layout grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2">
+              <div class="video-shell mb-6">
+                <div class="video-player-area aspect-video bg-black rounded-2xl relative overflow-hidden shadow-lg group">
+                   ${playerContent}
+                </div>
+                <div class="video-meta-bar flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 gap-4 pb-4 border-b border-gray-100">
+                  <div class="video-meta-left text-sm text-gray-500 space-y-1"><div>1080p · ${video.ratio === '9:16' ? '쇼츠 포맷' : '30초'} · 30초</div><div>업로드: ${video.date} · 조회 ${video.views} · 북마크 23</div></div>
+                  <div class="video-meta-right flex gap-2"><div class="pill-small px-3 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-600">AI 영상</div><div class="pill-small px-3 py-1 bg-visang-main/10 text-visang-main rounded-full text-xs font-bold">브랜드: ${video.brand}</div></div>
+                </div>
+              </div>
+              <h1 class="video-title-main text-2xl font-bold text-gray-900 mb-2">${video.title}</h1>
+              <div class="video-sub-info text-sm text-gray-500 mb-4">${video.brand} · ${video.purpose} · ${video.type}</div>
+              <div class="video-tags flex gap-2 mb-6">${video.tags.map((t, i) => `<span class="video-tag px-3 py-1 rounded-full text-xs ${i===0 ? 'bg-visang-main/10 text-visang-main font-bold' : 'bg-gray-100 text-gray-600'}">#${t}</span>`).join('')}</div>
+              <div class="video-actions-row flex flex-wrap gap-3 mb-8">
+                <button class="btn-primary px-5 py-2.5 bg-visang-main text-white rounded-xl font-bold hover:bg-cyan-600 transition-colors shadow-md">영상 다운로드</button>
+                <button class="btn-secondary px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition-colors">링크 복사</button>
+                <button class="btn-secondary px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition-colors">북마크</button>
+                <button class="btn-secondary px-5 py-2.5 bg-white border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition-colors">팀 채널에 공유</button>
+              </div>
+              <div class="video-desc bg-gray-50 p-6 rounded-2xl text-gray-700 leading-relaxed mb-10 whitespace-pre-line border border-gray-100">${video.desc}</div>
+              <section class="related-section">
+                <div class="related-title text-lg font-bold mb-4">비슷한 레퍼런스 영상</div>
+                <div class="related-grid grid grid-cols-2 md:grid-cols-4 gap-4">
+                  ${DB.videos.slice(1, 5).map(v => `
+                    <article class="related-card group cursor-pointer" onclick="app.router('detail', ${v.id})">
+                      <div class="related-thumb aspect-video bg-gray-200 rounded-lg mb-2 relative overflow-hidden">
+                        <img src="${v.image}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                        <div class="absolute inset-0 bg-black/10 group-hover:bg-black/20"></div>
+                      </div>
+                      <div class="related-body">
+                        <div class="related-title-text font-bold text-xs text-gray-800 line-clamp-1 group-hover:text-visang-main">${v.title}</div>
+                        <div class="related-meta-text text-[10px] text-gray-400">${v.brand} · ${v.purpose}</div>
+                      </div>
+                    </article>
+                  `).join('')}
+                </div>
+              </section>
+            </div>
+            <aside class="side-panel space-y-6">
+              <div class="panel bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <div class="panel-title font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100">영상 메타 정보</div>
+                <div class="meta-list space-y-3 text-sm">
+                  <div class="flex justify-between"><span class="meta-label text-gray-400">브랜드</span><span class="font-medium text-gray-700">${video.brand}</span></div>
+                  <div class="flex justify-between"><span class="meta-label text-gray-400">목적</span><span class="font-medium text-gray-700">${video.purpose}</span></div>
+                  <div class="flex justify-between"><span class="meta-label text-gray-400">생성 방식</span><span class="font-medium text-gray-700">${video.type}</span></div>
+                  <div class="flex justify-between"><span class="meta-label text-gray-400">채널</span><span class="font-medium text-gray-700">플랫폼, 유튜브 쇼츠</span></div>
+                  <div class="flex justify-between"><span class="meta-label text-gray-400">길이</span><span class="font-medium text-gray-700">00:30</span></div>
+                  <div class="flex justify-between"><span class="meta-label text-gray-400">비율</span><span class="font-medium text-gray-700">${video.ratio}</span></div>
+                </div>
+              </div>
+              <div class="prompt-panel bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <div class="prompt-header flex justify-between items-center mb-3"><div class="prompt-title font-bold text-slate-700">프롬프트 &amp; 생성 설정</div><div class="badge-soft text-[10px] bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-500">공유 가능</div></div>
+                <div class="prompt-body"><div class="bg-white p-4 rounded-xl border border-slate-200 text-xs font-mono text-slate-600 leading-relaxed select-all mb-3 max-h-40 overflow-y-auto">${video.prompt}${video.negative ? `\n\n--no ${video.negative}` : ''}</div><button class="prompt-copy-btn w-full py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-600 hover:text-visang-main hover:border-visang-main transition-colors" onclick="navigator.clipboard.writeText('${video.prompt.replace(/'/g, "\\'")}')">프롬프트 복사</button></div>
+                <div class="prompt-footer mt-4 text-[10px] text-slate-400 border-t border-slate-200 pt-3">실제 사용 툴: ${video.tool} · 해상도 1080x1920 · 30fps · 기본 프리셋 사용 후 편집툴에서 자막·BGM 추가</div>
+              </div>
+              <div class="panel bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <div class="panel-title font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100">사용 툴 / 워크플로우</div>
+                <div class="meta-list space-y-3 text-sm">
+                  <div class="flex justify-between"><span class="meta-label text-gray-400">AI 툴</span><span class="font-medium text-gray-700">${video.tool}</span></div>
+                  <div class="flex justify-between"><span class="meta-label text-gray-400">편집</span><span class="font-medium text-gray-700">Premiere Pro</span></div>
+                  <div class="flex justify-between"><span class="meta-label text-gray-400">소스</span><span class="font-medium text-gray-700">일러스트 레퍼런스</span></div>
+                </div>
+              </div>
+              <div class="panel bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                <div class="panel-title font-bold text-gray-900 mb-4 pb-2 border-b border-gray-100">제작자 정보</div>
+                <div class="creator-card flex items-center gap-3 mb-3">
+                  <div class="creator-avatar w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">DY</div>
+                  <div><div class="creator-info-main font-bold text-sm text-gray-900">${video.uploader}</div><div class="creator-info-sub text-xs text-gray-400">수학콘텐츠본부 · 디지털콘텐츠팀</div></div>
+                </div>
+                <div class="link-small text-xs text-visang-main cursor-pointer hover:underline">이 제작자의 다른 영상 보기</div>
+              </div>
+            </aside>
+          </section>
+        `;
+      },
+
+      // --- 6. My Page (유지) ---
+      renderMyPage(container) {
+        // 메인 컨테이너 원복
+        container.className = "flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full h-full";
+
+        const { name, team, avatar, stats, savedPrompts } = DB.userProfile;
+        const currentTab = this.state.mypageTab;
+
+        let contentHTML = '';
+        if (currentTab === 'uploads') {
+            contentHTML = DB.videos.map(v => this.createVideoCard(v)).join('');
+        } else if (currentTab === 'saved') {
+            contentHTML = savedPrompts.map(p => `
+                <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:border-visang-main hover:shadow-md transition-all group">
+                    <div class="flex justify-between items-start mb-3"><span class="text-xs font-bold text-visang-main bg-visang-main/5 px-2 py-1 rounded">${p.tags[0]}</span><button class="text-gray-400 hover:text-visang-main">📋</button></div>
+                    <h3 class="font-bold text-gray-900 mb-2">${p.title}</h3>
+                    <p class="text-xs text-gray-500 line-clamp-3 font-mono bg-gray-50 p-2 rounded">${p.prompt}</p>
+                </div>
+            `).join('');
+        } else if (currentTab === 'likes') {
+            contentHTML = DB.videos.slice(2, 5).map(v => this.createVideoCard(v)).join('');
+        }
+
+        const newProjectCard = `
+            <div class="bg-gradient-to-br from-gray-50 to-white rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:border-visang-main transition-colors group" onclick="app.router('upload')">
+                <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-2xl mb-3 group-hover:bg-visang-main group-hover:text-white transition-colors">+</div>
+                <div class="text-sm font-bold text-gray-600">새 프로젝트 시작</div>
+            </div>
+        `;
+
+        container.innerHTML = `
+          <div class="max-w-5xl mx-auto space-y-8">
+             <div class="bg-white rounded-4xl p-8 border border-gray-100 shadow-soft flex flex-col md:flex-row items-center gap-8">
+                <div class="w-24 h-24 rounded-full bg-gradient-to-br from-visang-navy to-gray-800 p-1">
+                   <div class="w-full h-full rounded-full bg-white flex items-center justify-center text-2xl font-bold text-gray-800">${avatar}</div>
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                   <h2 class="text-2xl font-bold text-gray-900">${name}</h2>
+                   <p class="text-gray-500 text-sm mb-4">${team}</p>
+                   <div class="flex justify-center md:justify-start gap-8 text-sm">
+                      <div class="text-center cursor-pointer hover:opacity-70 transition-opacity" onclick="app.setMyPageTab('uploads')"><div class="font-bold text-xl text-gray-900">${stats.uploads}</div><div class="text-gray-400 text-xs ${currentTab === 'uploads' ? 'text-visang-main font-bold' : ''}">Uploads</div></div>
+                      <div class="text-center cursor-pointer hover:opacity-70 transition-opacity" onclick="app.setMyPageTab('likes')"><div class="font-bold text-xl text-gray-900">${stats.likes}</div><div class="text-gray-400 text-xs ${currentTab === 'likes' ? 'text-visang-main font-bold' : ''}">Likes</div></div>
+                      <div class="text-center cursor-pointer hover:opacity-70 transition-opacity" onclick="app.setMyPageTab('saved')"><div class="font-bold text-xl text-gray-900">${stats.saved}</div><div class="text-gray-400 text-xs ${currentTab === 'saved' ? 'text-visang-main font-bold' : ''}">Saved</div></div>
+                   </div>
+                </div>
+                <button class="px-6 py-2.5 border border-gray-200 rounded-full text-sm font-medium hover:bg-gray-50 transition-colors">프로필 편집</button>
+             </div>
+             <div class="flex gap-1 border-b border-gray-200">
+                <button onclick="app.setMyPageTab('uploads')" class="px-5 py-3 text-sm font-medium transition-colors ${currentTab === 'uploads' ? 'text-visang-main border-b-2 border-visang-main' : 'text-gray-500 hover:text-gray-800'}">내 업로드 영상</button>
+                <button onclick="app.setMyPageTab('saved')" class="px-5 py-3 text-sm font-medium transition-colors ${currentTab === 'saved' ? 'text-visang-main border-b-2 border-visang-main' : 'text-gray-500 hover:text-gray-800'}">저장한 프롬프트</button>
+                <button onclick="app.setMyPageTab('likes')" class="px-5 py-3 text-sm font-medium transition-colors ${currentTab === 'likes' ? 'text-visang-main border-b-2 border-visang-main' : 'text-gray-500 hover:text-gray-800'}">좋아요</button>
+             </div>
+             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-pulse" style="animation: none;">
+                ${currentTab === 'uploads' ? newProjectCard + contentHTML : contentHTML}
+             </div>
+          </div>
+        `;
+      },
+
+      // --- 7. Guide (Internal Manual Ver.) ---
+      renderGuide(container) {
+        // 메인 컨테이너 스타일 (기존 유지)
+        container.className = "flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full h-full";
+        
+        container.innerHTML = `
+          <div class="max-w-5xl mx-auto space-y-16 pb-20">
+             
+             <div class="relative bg-gradient-to-r from-visang-navy to-slate-800 rounded-4xl p-10 md:p-14 text-white overflow-hidden shadow-soft group">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-visang-main opacity-20 blur-[80px] rounded-full translate-x-1/3 -translate-y-1/3"></div>
+                <div class="relative z-10">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-bold mb-4 backdrop-blur-md text-visang-main">
+                        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Internal Guide v1.0
+                    </div>
+                    <h2 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 leading-tight">
+                        상상을 <span class="text-transparent bg-clip-text bg-gradient-to-r from-visang-main to-blue-400">콘텐츠</span>로.<br>
+                        AI Video Hub 100% 활용법
+                    </h2>
+                    <p class="text-gray-300 text-lg max-w-2xl leading-relaxed">
+                        비상교육 크리에이터를 위한 AI 영상 제작부터 공유까지.<br>
+                        복잡한 기술은 덜어내고, 창의성에만 집중하세요.
+                    </p>
+                </div>
+                <div class="absolute right-10 bottom-10 opacity-30 group-hover:opacity-50 transition-opacity duration-700 hidden md:block">
+                    <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" class="text-white rotate-12">
+                       <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                       <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+             </div>
+
+             <section>
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm">01</span>
+                    워크플로우
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-visang-main flex items-center justify-center text-2xl mb-5">🔍</div>
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">레퍼런스 탐색</h4>
+                        <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                            '탐색' 탭에서 다른 팀이 만든 영상을 확인하세요. 브랜드별, 목적별 필터를 통해 내 기획과 가장 비슷한 스타일을 찾을 수 있습니다.
+                        </p>
+                        <button onclick="app.router('explore')" class="text-xs font-bold text-visang-main hover:underline">탐색하러 가기 →</button>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1">
+                        <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center text-2xl mb-5">✍️</div>
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">프롬프트 작성</h4>
+                        <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                            AI 툴(Runway, Midjourney 등)을 사용해 영상을 생성하세요. 아래 '프롬프트 치트키'를 활용하면 퀄리티가 높아집니다.
+                        </p>
+                        <a href="#prompt-cheat" class="text-xs font-bold text-purple-600 hover:underline">작성 팁 보기 →</a>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1">
+                        <div class="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center text-2xl mb-5">📤</div>
+                        <h4 class="text-lg font-bold text-gray-900 mb-2">업로드 & 공유</h4>
+                        <p class="text-sm text-gray-500 leading-relaxed mb-4">
+                            완성된 영상은 이곳에 업로드하여 자산화합니다. 사용한 툴과 프롬프트를 상세히 기록하면 동료들에게 큰 도움이 됩니다.
+                        </p>
+                        <button onclick="app.router('upload')" class="text-xs font-bold text-green-600 hover:underline">업로드 하기 →</button>
+                    </div>
+                </div>
+             </section>
+
+             <section id="prompt-cheat">
+                <div class="flex justify-between items-end mb-6">
+                    <h3 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm">02</span>
+                        프롬프트 치트키
+                    </h3>
+                    <span class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">클릭하면 복사됩니다</span>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-gray-900 rounded-3xl p-6 border border-gray-700 relative group overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-50"><span class="text-4xl">🧸</span></div>
+                        <div class="relative z-10">
+                            <h4 class="text-white font-bold mb-1">3D 캐릭터/교육용</h4>
+                            <p class="text-gray-400 text-xs mb-4">디즈니/픽사 스타일의 깔끔하고 귀여운 3D 렌더링</p>
+                            <div class="bg-black/50 p-4 rounded-xl border border-white/10 cursor-pointer hover:border-visang-main transition-colors group/code"
+                                 onclick="navigator.clipboard.writeText(this.innerText); alert('프롬프트가 복사되었습니다!');">
+                                <p class="text-xs font-mono text-green-400 leading-relaxed group-hover/code:text-white transition-colors">
+                                    "Cute 3D character, educational mascot, studying in a bright classroom, Pixar style render, soft volumetric lighting, 8k resolution, high detail, cheerful atmosphere --ar 16:9"
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-3xl p-6 border border-gray-700 relative group overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-50"><span class="text-4xl">🎬</span></div>
+                        <div class="relative z-10">
+                            <h4 class="text-white font-bold mb-1">시네마틱/실사</h4>
+                            <p class="text-gray-400 text-xs mb-4">광고나 캠페인 영상에 적합한 고화질 실사 느낌</p>
+                            <div class="bg-black/50 p-4 rounded-xl border border-white/10 cursor-pointer hover:border-visang-main transition-colors group/code"
+                                 onclick="navigator.clipboard.writeText(this.innerText); alert('프롬프트가 복사되었습니다!');">
+                                <p class="text-xs font-mono text-blue-400 leading-relaxed group-hover/code:text-white transition-colors">
+                                    "Cinematic shot, hyper-realistic, shallow depth of field, dramatic lighting, golden hour, emotional atmosphere, 4k, shot on 35mm lens --ar 16:9 --motion 5"
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-3xl p-6 border border-gray-700 relative group overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-50"><span class="text-4xl">🌊</span></div>
+                        <div class="relative z-10">
+                            <h4 class="text-white font-bold mb-1">추상/모션그래픽</h4>
+                            <p class="text-gray-400 text-xs mb-4">자막 배경이나 인트로에 쓰기 좋은 추상 그래픽</p>
+                            <div class="bg-black/50 p-4 rounded-xl border border-white/10 cursor-pointer hover:border-visang-main transition-colors group/code"
+                                 onclick="navigator.clipboard.writeText(this.innerText); alert('프롬프트가 복사되었습니다!');">
+                                <p class="text-xs font-mono text-purple-400 leading-relaxed group-hover/code:text-white transition-colors">
+                                    "Abstract fluid gradient background, liquid motion, pastel colors, soft shapes, smooth animation, loopable, minimal design, 4k --ar 16:9"
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-900 rounded-3xl p-6 border border-gray-700 relative group overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-50"><span class="text-4xl">✂️</span></div>
+                        <div class="relative z-10">
+                            <h4 class="text-white font-bold mb-1">페이퍼 아트/동화</h4>
+                            <p class="text-gray-400 text-xs mb-4">종이 질감이 느껴지는 따뜻한 감성</p>
+                            <div class="bg-black/50 p-4 rounded-xl border border-white/10 cursor-pointer hover:border-visang-main transition-colors group/code"
+                                 onclick="navigator.clipboard.writeText(this.innerText); alert('프롬프트가 복사되었습니다!');">
+                                <p class="text-xs font-mono text-yellow-400 leading-relaxed group-hover/code:text-white transition-colors">
+                                    "Layered paper art style, pop-up book aesthetic, fairytale forest, warm lighting, textured paper, handcrafted feel, intricate details --ar 16:9"
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+             </section>
+
+             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-red-50/50 rounded-3xl p-8 border border-red-100">
+                    <h3 class="text-xl font-bold text-red-900 mb-4 flex items-center gap-2">⚠️ 업로드 전 필수 체크</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <div class="text-sm text-red-800">
+                                <strong>초상권 확인:</strong> 실제 학생이나 교사의 얼굴이 포함된 경우, 반드시 초상권 동의 여부를 확인 후 업로드해주세요. (AI 생성 인물은 제외)
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-red-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <div class="text-sm text-red-800">
+                                <strong>저작권 이슈:</strong> 무료 AI 툴 사용 시 '상업적 이용 가능(Commercial Use)' 여부를 툴의 약관에서 확인해야 합니다.
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">추천 툴</h3>
+                    <div class="space-y-3">
+                        <a href="#" class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group border border-gray-100">
+                            <span class="text-sm font-bold text-gray-700">Midjourney</span>
+                            <span class="text-xs text-gray-400 group-hover:text-visang-main">Image →</span>
+                        </a>
+                        <a href="#" class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group border border-gray-100">
+                            <span class="text-sm font-bold text-gray-700">Runway Gen-2</span>
+                            <span class="text-xs text-gray-400 group-hover:text-visang-main">Video →</span>
+                        </a>
+                        <a href="#" class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group border border-gray-100">
+                            <span class="text-sm font-bold text-gray-700">Pika Art</span>
+                            <span class="text-xs text-gray-400 group-hover:text-visang-main">Ani →</span>
+                        </a>
+                    </div>
+                </div>
+             </div>
+
+             <section>
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <span class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center text-sm">03</span>
+                    자주 묻는 질문
+                </h3>
+                <div class="space-y-3">
+                    <details class="group bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                        <summary class="flex justify-between items-center p-5 cursor-pointer font-bold text-gray-800 hover:bg-gray-50 transition-colors list-none">
+                            Q. 생성된 영상의 저작권은 누구에게 있나요?
+                            <span class="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+                        </summary>
+                        <div class="px-5 pb-5 text-sm text-gray-600 bg-gray-50/50 leading-relaxed border-t border-gray-100 pt-3">
+                            유료 플랜을 사용하는 경우 대부분 사용자(비상교육)에게 저작권이 귀속됩니다. 단, 툴마다 약관이 다르므로 업로드 시 '메타 정보'에 사용 툴을 정확히 기재해주시면 운영팀에서 2차 검수합니다.
+                        </div>
+                    </details>
+
+                    <details class="group bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                        <summary class="flex justify-between items-center p-5 cursor-pointer font-bold text-gray-800 hover:bg-gray-50 transition-colors list-none">
+                            Q. 한글 프롬프트도 잘 인식되나요?
+                            <span class="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+                        </summary>
+                        <div class="px-5 pb-5 text-sm text-gray-600 bg-gray-50/50 leading-relaxed border-t border-gray-100 pt-3">
+                            최근 일부 툴이 한국어를 지원하지만, 아직은 <strong>영어 프롬프트</strong>가 훨씬 더 정확하고 퀄리티 높은 결과를 만듭니다. DeepL이나 ChatGPT를 활용해 영문으로 변환 후 입력하는 것을 권장합니다.
+                        </div>
+                    </details>
+                    
+                    <details class="group bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                        <summary class="flex justify-between items-center p-5 cursor-pointer font-bold text-gray-800 hover:bg-gray-50 transition-colors list-none">
+                            Q. 영상 길이를 4초 이상으로 만들고 싶어요.
+                            <span class="text-gray-400 transition-transform group-open:rotate-180">▼</span>
+                        </summary>
+                        <div class="px-5 pb-5 text-sm text-gray-600 bg-gray-50/50 leading-relaxed border-t border-gray-100 pt-3">
+                            대부분의 생성형 AI는 한 번에 3~4초 영상을 만듭니다. 'Extend(연장하기)' 기능을 사용하여 4초씩 이어 붙이거나, 여러 컷을 생성하여 편집 툴(Premiere Pro 등)에서 합치는 방식이 가장 자연스럽습니다.
+                        </div>
+                    </details>
+                </div>
+             </section>
+
+          </div>
+        `;
+      },
+
+      // --- Notification Toggle Logic (유지) ---
+      toggleNotificationPanel() {
+          const panel = document.getElementById('notification-panel');
+          const notiList = document.getElementById('noti-list');
+          this.state.showNotiPanel = !this.state.showNotiPanel;
+          if (this.state.showNotiPanel) {
+              panel.classList.remove('hidden');
+              notiList.innerHTML = DB.notifications.map(n => `
+                 <div class="p-4 flex gap-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${!n.read ? 'bg-blue-50/40' : ''}">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 ${n.type === 'like' ? 'bg-red-100 text-red-500' : n.type === 'comment' ? 'bg-blue-100 text-blue-500' : n.type === 'mention' ? 'bg-green-100 text-green-500' : 'bg-gray-100 text-gray-500'}">${n.type === 'like' ? '❤️' : n.type === 'comment' ? '💬' : n.type === 'mention' ? '@' : '📢'}</div>
+                    <div class="flex-1"><div class="text-xs text-gray-800"><span class="font-bold">${n.user}</span>${n.text}</div><div class="text-[10px] text-gray-400 mt-1">${n.time}</div></div>
+                    ${!n.read ? '<div class="w-1.5 h-1.5 bg-red-500 rounded-full mt-1"></div>' : ''}
+                 </div>
+              `).join('');
+          } else { panel.classList.add('hidden'); }
+      },
+
+      // Helper Functions (CreateVideoCard에 이미지 적용)
+      setMyPageTab(tabName) { this.state.mypageTab = tabName; this.renderMyPage(document.getElementById('app-container')); },
+      setFilter(type, value) { this.state.filters[type] = value; this.renderExplore(document.getElementById('app-container')); },
+      setSort(value) { this.state.sortBy = value; this.renderExplore(document.getElementById('app-container')); },
+      setSearch(value) { this.state.searchQuery = value; this.renderExplore(document.getElementById('app-container')); setTimeout(() => { const input = document.querySelector('input[type="text"]'); if(input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); } }, 0); },
+      resetFilters() { this.state.filters = { brand: 'All', purpose: 'All', type: 'All' }; this.state.searchQuery = ''; this.renderExplore(document.getElementById('app-container')); },
+      
+      createVideoCard(video) { 
+        return `
+          <article class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden group hover:-translate-y-1 hover:shadow-lg transition-all cursor-pointer" onclick="app.router('detail', ${video.id})">
+            <div class="h-36 relative overflow-hidden bg-gray-100">
+               <img src="${video.image}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+               <div class="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition-colors"></div>
+               <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center border border-white/50 group-hover:scale-110 transition-transform"><div class="w-0 h-0 border-t-[6px] border-t-transparent border-l-[10px] border-l-white border-b-[6px] border-b-transparent ml-1"></div></div>
+               <span class="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">👀 ${video.views}</span>
+            </div>
+            <div class="p-3">
+              <div class="flex flex-wrap gap-1 mb-1.5"><span class="text-[10px] font-bold text-visang-main bg-visang-main/5 px-1.5 py-0.5 rounded">${video.brand}</span><span class="text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">${video.purpose}</span></div>
+              <h3 class="font-bold text-gray-800 text-sm mb-1 line-clamp-2">${video.title}</h3>
+              <div class="text-[10px] text-gray-400">${video.type} · ${video.tool}</div>
+            </div>
+          </article>
+        `; 
+      },
+      toggleAdvanced() { this.state.showAdvancedUpload = !this.state.showAdvancedUpload; const advArea = document.getElementById('advanced-area'); const advText = document.getElementById('adv-toggle-text'); if(this.state.showAdvancedUpload) { advArea.classList.remove('hidden'); advText.innerText = '[접기]'; } else { advArea.classList.add('hidden'); advText.innerText = '[펼쳐보기]'; } },
+      openComments(videoId) { const video = DB.videos.find(v => v.id === videoId); this.state.currentVideoComments = video && video.comments ? [...video.comments] : []; this.state.currentVideoId = videoId; this.renderCommentList(); document.getElementById('comment-drawer').classList.remove('translate-y-full'); },
+      closeComments() { document.getElementById('comment-drawer').classList.add('translate-y-full'); },
+      renderCommentList() { const listEl = document.getElementById('comment-list'); const countEl = document.getElementById('comment-count'); if(!listEl) return; countEl.innerText = this.state.currentVideoComments.length; if (this.state.currentVideoComments.length === 0) { listEl.innerHTML = `<div class="text-center text-gray-400 py-10 text-sm">아직 댓글이 없습니다.<br>첫 댓글을 남겨보세요!</div>`; return; } listEl.innerHTML = this.state.currentVideoComments.map(c => `<div class="flex gap-3 mb-2 animate-pulse" style="animation: none;"><div class="w-8 h-8 rounded-full bg-visang-main/20 flex items-center justify-center text-xs font-bold text-visang-main shrink-0">${c.user.charAt(0)}</div><div class="bg-white p-2.5 rounded-r-xl rounded-bl-xl shadow-sm border border-gray-100 text-sm"><div class="font-bold text-gray-900 text-xs mb-0.5">${c.user}</div><div class="text-gray-700">${c.text}</div></div></div>`).join(''); listEl.scrollTop = listEl.scrollHeight; },
+      addComment(e) { e.preventDefault(); const input = document.getElementById('comment-input'); const text = input.value.trim(); if(!text) return; this.state.currentVideoComments.push({ user: '나(Guest)', text: text }); this.renderCommentList(); input.value = ''; }
+    };
+
+    // [커스텀 커서 및 앱 초기화]
+    document.addEventListener('DOMContentLoaded', () => {
+        app.init();
+        const cursor = document.querySelector('.cursor-dot');
+        document.addEventListener('mousemove', (e) => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
+        document.addEventListener('mouseover', (e) => { if(e.target.closest('a, button, .cursor-pointer, .interactive, .nav-item, .group, select, input, textarea')) { cursor.style.width = '40px'; cursor.style.height = '40px'; cursor.style.backgroundColor = 'rgba(0, 255, 136, 0.5)'; } });
+        document.addEventListener('mouseout', (e) => { if(e.target.closest('a, button, .cursor-pointer, .interactive, .nav-item, .group, select, input, textarea')) { cursor.style.width = '10px'; cursor.style.height = '10px'; cursor.style.backgroundColor = '#00ff88'; } });
+
+        // Iframe Auto Resize using postMessage
+        const sendHeight = () => {
+            const height = document.documentElement.scrollHeight;
+            window.parent.postMessage({ type: 'resize', height: height }, '*');
+        };
+
+        const resizeObserver = new ResizeObserver(sendHeight);
+        resizeObserver.observe(document.body);
+        window.addEventListener('load', sendHeight);
+    });
+  </script>
+</body>
+</html>

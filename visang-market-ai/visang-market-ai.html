@@ -1,0 +1,1835 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visang Market</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { height: auto; min-height: auto; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(to bottom right, #e0f2fe, #e0f7fa, #e0f7fa);
+            min-height: auto;
+            color: #1f2937;
+            position: relative;
+        }
+        /* Background Orbs Animation */
+        .bg-orbs {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            mix-blend-mode: multiply;
+            filter: blur(80px);
+            opacity: 0.3;
+        }
+        .bg-orb-1 {
+            top: 5rem;
+            left: 5rem;
+            width: 24rem;
+            height: 24rem;
+            background: #67e8f9;
+            animation: blob 7s infinite;
+        }
+        .bg-orb-2 {
+            top: 10rem;
+            right: 5rem;
+            width: 24rem;
+            height: 24rem;
+            background: #93c5fd;
+            animation: blob 7s infinite;
+            animation-delay: 2s;
+        }
+        .bg-orb-3 {
+            bottom: 5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24rem;
+            height: 24rem;
+            background: #7dd3fc;
+            animation: blob 7s infinite;
+            animation-delay: 4s;
+        }
+        @keyframes blob {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 1rem; position: relative; z-index: 1; }
+        header {
+            position: relative;
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.7);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .header-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(to right, #0891b2, #0284c7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .logo:hover {
+            opacity: 0.8;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.875rem;
+        }
+        .btn-primary {
+            background: linear-gradient(to right, #0891b2, #0284c7);
+            color: white;
+            padding: 0.5rem 1rem;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            transform: scale(1.05);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.7);
+            color: #374151;
+            border: 1px solid #e5e7eb;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .card {
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .search-card {
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .header-content { flex-wrap: wrap; gap: 0.5rem; }
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+        }
+        .search-input-wrapper {
+            position: relative;
+            flex: 1;
+        }
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1.25rem;
+            height: 1.25rem;
+            color: #9ca3af;
+            pointer-events: none;
+        }
+        .search-input {
+            padding-left: 3rem;
+        }
+        .category-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+            border: 1px solid #e5e7eb;
+            background: rgba(255, 255, 255, 0.7);
+            color: #374151;
+            cursor: pointer;
+        }
+        .category-btn.active {
+            background: linear-gradient(to right, #0891b2, #0284c7);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .category-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .category-scroll {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0 1rem;
+            margin: 0 -1rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+            -webkit-overflow-scrolling: touch;
+        }
+        .category-scroll::-webkit-scrollbar {
+            height: 4px;
+        }
+        .category-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .category-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+        .tool-card {
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .tool-card:hover {
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+            transform: scale(1.05);
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+        }
+        .badge-prompt {
+            background: linear-gradient(to right, #06b6d4, #0284c7);
+        }
+        .badge-tool {
+            background: linear-gradient(to right, #10b981, #059669);
+        }
+        .badge-model {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+        }
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            animation: slideIn 0.3s;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .spinner {
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid #0891b2;
+            border-radius: 50%;
+            width: 3rem;
+            height: 3rem;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hidden { display: none; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .filter-wrapper {
+            position: relative;
+        }
+        .filter-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1rem;
+            height: 1rem;
+            color: #9ca3af;
+            pointer-events: none;
+        }
+        .filter-select {
+            padding-left: 2.5rem;
+        }
+        .like-btn-card:hover {
+            color: #ef4444 !important;
+        }
+        .like-btn-card:hover svg {
+            fill: currentColor;
+        }
+        .like-btn-detail:hover {
+            color: #ef4444 !important;
+        }
+        .like-btn-detail:hover svg {
+            fill: currentColor;
+        }
+        .like-btn-comment:hover {
+            color: #ef4444 !important;
+        }
+        .like-btn-comment:hover svg {
+            fill: currentColor;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-orbs">
+        <div class="bg-orb bg-orb-1"></div>
+        <div class="bg-orb bg-orb-2"></div>
+        <div class="bg-orb bg-orb-3"></div>
+    </div>
+    <div id="app"></div>
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyDGYI6hNS9LNrYOK2LV5oMDTVK1g2BbygY",
+            authDomain: "ai-lab-55ee1.firebaseapp.com",
+            projectId: "ai-lab-55ee1",
+            storageBucket: "ai-lab-55ee1.firebasestorage.app",
+            messagingSenderId: "693506739860",
+            appId: "1:693506739860:web:1112a5884eb533a75a6e81",
+            measurementId: "G-PZKR99DJDH"
+        };
+        
+        // Firebase 초기화
+        let db = null;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+        } catch (e) {
+            console.warn('Firebase 초기화 실패:', e);
+        }
+        
+        // 기본 데이터 - 모든 도구 포함
+        const defaultTools = [
+            {
+                id: 1, title: "회의록 자동 정리",
+                description: "회의 내용을 입력하면 핵심 내용, 결정 사항, 액션 아이템을 자동으로 정리해줍니다.",
+                longDescription: "회의가 끝난 후 회의록 작성에 시간을 많이 소비하고 계신가요? 이 프롬프트는 회의 중 기록한 내용이나 녹취록을 입력하면 자동으로 체계적인 회의록을 생성해줍니다. 핵심 논의사항, 결정된 내용, 담당자별 액션 아이템까지 명확하게 정리되어 회의 후속 조치가 쉬워집니다.",
+                category: "업무 생산성", aiModel: "GPT-4", type: "프롬프트",
+                likes: 245, views: 1820, comments: 32, createdAt: "2024-01-15",
+                prompt: "당신은 전문 회의록 작성자입니다. 제공된 회의 내용을 다음 형식으로 정리해주세요:\n\n# 회의 정보\n- 일시:\n- 참석자:\n- 회의 주제:\n\n# 핵심 논의사항\n[회의에서 논의된 주요 내용을 3-5개 항목으로 요약]\n\n# 결정 사항\n[회의에서 결정된 내용을 명확하게 나열]\n\n# 액션 아이템\n[담당자별 실행 과제와 마감일]\n- [담당자] : [과제 내용] (마감: [날짜])\n\n# 다음 회의 안건\n[다음 회의에서 다룰 내용]",
+                features: ["핵심 내용만 간추린 요약", "명확한 결정사항 정리", "담당자별 액션 아이템 분류", "다음 회의 안건 제안"],
+                steps: [
+                    { title: "회의 내용 준비", desc: "회의 중 작성한 메모나 녹취록을 준비합니다." },
+                    { title: "프롬프트 입력", desc: "준비한 회의 내용과 함께 프롬프트를 AI에 입력합니다." },
+                    { title: "결과 확인", desc: "생성된 회의록을 검토하고 필요시 수정합니다." },
+                    { title: "공유", desc: "완성된 회의록을 참석자들에게 공유합니다." }
+                ],
+                reviews: [
+                    { name: "김민수 · 기획팀", date: "2024.01.18", text: "회의록 작성 시간이 30분에서 5분으로 줄었습니다. 정말 유용해요!" },
+                    { name: "이지은 · 마케팅팀", date: "2024.01.15", text: "액션 아이템이 명확하게 정리되어 팀원들과 공유하기 좋습니다." },
+                    { name: "박준혁 · 개발팀", date: "2024.01.12", text: "대부분 만족스럽지만 가끔 전문 용어가 잘못 정리될 때가 있어요." }
+                ]
+            },
+            {
+                id: 2, title: "SQL 쿼리 생성기",
+                description: "자연어로 데이터베이스 요구사항을 설명하면 최적화된 SQL 쿼리를 생성합니다.",
+                longDescription: "복잡한 SQL 쿼리 작성에 어려움을 겪고 계신가요? 이 프롬프트는 자연어로 작성된 데이터 요구사항을 분석하여 최적화된 SQL 쿼리를 자동으로 생성합니다. JOIN, 서브쿼리, 집계 함수 등 복잡한 쿼리도 쉽게 만들 수 있으며, 성능 최적화 팁도 함께 제공됩니다.",
+                category: "개발 도구", aiModel: "Claude 3", type: "프롬프트",
+                likes: 312, views: 2150, comments: 24, createdAt: "2024-01-18",
+                prompt: "당신은 데이터베이스 전문가입니다. 사용자의 요구사항을 분석하여 최적화된 SQL 쿼리를 생성해주세요.\n\n[요구사항]\n{사용자가 입력한 데이터 조회 요구사항}\n\n[데이터베이스 스키마]\n{테이블 구조 정보}\n\n다음 형식으로 답변해주세요:\n\n## 생성된 SQL 쿼리\n```sql\n[쿼리 코드]\n```\n\n## 쿼리 설명\n- 주요 로직 설명\n- 성능 최적화 포인트\n- 주의사항",
+                features: ["자연어를 SQL로 자동 변환", "복잡한 JOIN 쿼리 지원", "성능 최적화 제안", "다양한 DB 지원 (MySQL, PostgreSQL 등)"],
+                steps: [
+                    { title: "테이블 구조 파악", desc: "데이터베이스의 테이블 구조와 컬럼 정보를 확인합니다." },
+                    { title: "요구사항 정리", desc: "조회하고자 하는 데이터의 조건을 명확히 정리합니다." },
+                    { title: "프롬프트 입력", desc: "스키마와 요구사항을 프롬프트에 입력하여 AI에게 전달합니다." },
+                    { title: "쿼리 검증", desc: "생성된 SQL 쿼리를 테스트 환경에서 먼저 실행해봅니다." }
+                ],
+                reviews: [
+                    { name: "김태현 · 개발팀", date: "2024.01.16", text: "복잡한 조인 쿼리도 정확하게 생성해줍니다. 쿼리 최적화 팁도 함께 제공되어 정말 유용합니다!" },
+                    { name: "정민지 · 데이터분석팀", date: "2024.01.14", text: "SQL 초보자인데도 복잡한 데이터 분석 쿼리를 쉽게 작성할 수 있게 되었습니다." },
+                    { name: "이준석 · 백엔드팀", date: "2024.01.11", text: "대부분의 쿼리는 완벽하게 생성됩니다. 가끔 복잡한 비즈니스 로직은 수정이 필요합니다." }
+                ]
+            },
+            {
+                id: 3, title: "마케팅 카피라이팅",
+                description: "제품 정보를 입력하면 SNS, 이메일, 광고용 마케팅 문구를 자동 생성합니다.",
+                longDescription: "효과적인 마케팅 문구 작성이 고민이신가요? 이 프롬프트는 제품이나 서비스의 핵심 정보를 입력하면 타겟 고객의 마음을 사로잡는 마케팅 카피를 자동으로 생성합니다. SNS 게시물, 이메일 마케팅, 광고 문구 등 다양한 채널에 맞는 문구를 한 번에 만들 수 있습니다.",
+                category: "마케팅", aiModel: "GPT-4", type: "프롬프트",
+                likes: 428, views: 3240, comments: 45, createdAt: "2024-01-20",
+                prompt: "당신은 전문 카피라이터입니다. 제공된 제품/서비스 정보를 바탕으로 매력적인 마케팅 문구를 작성해주세요.\n\n[제품/서비스 정보]\n{사용자가 입력한 제품 정보}\n\n다음 형식으로 다양한 마케팅 문구를 생성해주세요:\n\n## SNS 게시물 (Instagram/Facebook)\n[감성적이고 참여를 유도하는 짧은 문구와 해시태그]\n\n## 이메일 제목\n[클릭을 유도하는 매력적인 제목 3가지]\n\n## 광고 카피 (30자 이내)\n[핵심을 담은 임팩트 있는 짧은 문구]\n\n## 상세 설명\n[제품의 가치와 혜택을 강조하는 중간 길이의 설명]",
+                features: ["다양한 채널별 맞춤 문구", "타겟 고객 분석 기반 작성", "감성적 호소와 논리적 설득 조합", "A/B 테스트용 다양한 버전 제공"],
+                steps: [
+                    { title: "제품 정보 입력", desc: "제품/서비스의 핵심 특징과 타겟 고객 정보를 입력합니다." },
+                    { title: "채널 선택", desc: "필요한 마케팅 채널을 선택합니다 (SNS, 이메일, 광고 등)." },
+                    { title: "문구 생성", desc: "AI가 다양한 버전의 마케팅 문구를 생성합니다." },
+                    { title: "최적화", desc: "생성된 문구 중 가장 효과적인 것을 선택하거나 수정합니다." }
+                ],
+                reviews: [
+                    { name: "최서연 · 마케팅팀", date: "2024.01.17", text: "다양한 버전의 카피를 빠르게 만들 수 있어서 A/B 테스트하기 좋습니다!" },
+                    { name: "강민호 · 스타트업 대표", date: "2024.01.13", text: "마케팅 전문가 없이도 전문적인 광고 문구를 만들 수 있게 되었습니다." },
+                    { name: "윤지혜 · 콘텐츠팀", date: "2024.01.09", text: "SNS 문구가 특히 좋습니다. 가끔 브랜드 톤앤매너 조정이 필요해요." }
+                ]
+            },
+            {
+                id: 4, title: "코드 리뷰 어시스턴트",
+                description: "코드를 분석하여 버그, 성능 이슈, 보안 취약점을 찾아내고 개선 방안을 제시합니다.",
+                category: "개발 도구", aiModel: "Claude 3", type: "AI 툴",
+                likes: 389, views: 2890, comments: 38, createdAt: "2024-01-19",
+                toolUrl: "https://example.com/code-reviewer",
+                features: ["자동 버그 감지", "성능 최적화 제안", "보안 취약점 분석", "코드 스타일 검사"],
+                steps: [
+                    { title: "코드 업로드", desc: "리뷰할 코드를 업로드하거나 붙여넣습니다." },
+                    { title: "분석 실행", desc: "AI가 코드를 분석하여 이슈를 찾아냅니다." },
+                    { title: "결과 확인", desc: "발견된 문제점과 개선 방안을 확인합니다." },
+                    { title: "수정 적용", desc: "제안된 개선사항을 코드에 반영합니다." }
+                ],
+                reviews: [
+                    { name: "김수진 · 개발팀", date: "2024.01.19", text: "코드 리뷰 시간이 크게 단축되었습니다. 특히 보안 이슈를 잘 찾아줍니다!" },
+                    { name: "이동현 · 백엔드팀", date: "2024.01.16", text: "성능 최적화 제안이 정말 유용합니다. 코드 품질이 향상되었어요." },
+                    { name: "박지원 · 프론트엔드팀", date: "2024.01.14", text: "대부분의 이슈를 잘 찾아주지만 가끔 false positive가 있어요." }
+                ]
+            },
+            {
+                id: 5, title: "이메일 답장 자동화",
+                description: "받은 이메일의 내용을 분석하여 상황에 맞는 답장을 자동으로 작성합니다.",
+                category: "업무 생산성", aiModel: "GPT-4", type: "프롬프트",
+                likes: 567, views: 4120, comments: 56, createdAt: "2024-01-22",
+                prompt: "당신은 전문 이메일 작성 어시스턴트입니다. 받은 이메일의 내용을 분석하여 적절한 답장을 작성해주세요.\n\n[받은 이메일]\n{이메일 내용}\n\n다음 사항을 고려하여 답장을 작성해주세요:\n- 정중하고 전문적인 톤\n- 핵심 내용에 대한 명확한 답변\n- 필요한 경우 추가 정보 요청\n- 적절한 마무리 인사",
+                features: ["이메일 내용 자동 분석", "상황별 맞춤 답장", "다양한 톤앤매너 지원", "다국어 지원"],
+                steps: [
+                    { title: "이메일 복사", desc: "답장할 이메일의 내용을 복사합니다." },
+                    { title: "프롬프트 입력", desc: "이메일 내용과 함께 프롬프트를 AI에 입력합니다." },
+                    { title: "답장 확인", desc: "생성된 답장을 검토하고 필요시 수정합니다." },
+                    { title: "전송", desc: "완성된 답장을 이메일로 전송합니다." }
+                ],
+                reviews: [
+                    { name: "김민수 · 영업팀", date: "2024.01.21", text: "이메일 답장 시간이 절반으로 줄었습니다. 특히 반복적인 문의에 유용해요!" },
+                    { name: "이지은 · 고객지원팀", date: "2024.01.18", text: "고객 문의에 대한 답변이 일관성 있고 전문적입니다." }
+                ]
+            },
+            {
+                id: 6, title: "데이터 분석 리포트",
+                description: "데이터를 입력하면 인사이트를 도출하고 시각화된 분석 리포트를 생성합니다.",
+                category: "데이터 분석", aiModel: "GPT-4", type: "AI 툴",
+                likes: 291, views: 2340, comments: 29, createdAt: "2024-01-17",
+                toolUrl: "https://example.com/data-analyzer",
+                features: ["자동 인사이트 도출", "시각화 차트 생성", "트렌드 분석", "예측 모델링"],
+                steps: [
+                    { title: "데이터 업로드", desc: "분석할 데이터 파일을 업로드합니다." },
+                    { title: "분석 실행", desc: "AI가 데이터를 분석하여 인사이트를 도출합니다." },
+                    { title: "리포트 확인", desc: "생성된 리포트와 차트를 확인합니다." },
+                    { title: "공유", desc: "리포트를 팀원들과 공유합니다." }
+                ],
+                reviews: [
+                    { name: "정민지 · 데이터분석팀", date: "2024.01.16", text: "복잡한 데이터도 쉽게 분석할 수 있어서 정말 유용합니다!" }
+                ]
+            },
+            {
+                id: 7, title: "번역 및 로컬라이징",
+                description: "다국어 번역과 함께 현지 문화에 맞는 표현으로 자동 변환합니다.",
+                category: "언어", aiModel: "GPT-4", type: "프롬프트",
+                likes: 623, views: 5280, comments: 67, createdAt: "2024-01-21",
+                prompt: "당신은 전문 번역가이자 로컬라이징 전문가입니다. 제공된 텍스트를 목표 언어로 번역하고, 현지 문화에 맞게 조정해주세요.\n\n[원문]\n{번역할 텍스트}\n\n[목표 언어]\n{목표 언어}\n\n다음 사항을 고려하여 번역해주세요:\n- 정확한 의미 전달\n- 현지 문화와 관습에 맞는 표현\n- 자연스러운 문체\n- 전문 용어의 적절한 번역",
+                features: ["다국어 번역", "문화적 맥락 고려", "자연스러운 문체", "전문 용어 처리"],
+                steps: [
+                    { title: "텍스트 입력", desc: "번역할 텍스트를 입력합니다." },
+                    { title: "언어 선택", desc: "목표 언어를 선택합니다." },
+                    { title: "번역 실행", desc: "AI가 번역과 로컬라이징을 수행합니다." },
+                    { title: "검토", desc: "번역 결과를 검토하고 필요시 수정합니다." }
+                ],
+                reviews: [
+                    { name: "최서연 · 글로벌팀", date: "2024.01.20", text: "번역 품질이 정말 좋습니다. 특히 문화적 맥락을 잘 반영해줍니다!" }
+                ]
+            },
+            {
+                id: 8, title: "교육 콘텐츠 제작",
+                description: "주제를 입력하면 학습 목표, 커리큘럼, 퀴즈까지 포함된 교육 자료를 생성합니다.",
+                category: "교육", aiModel: "Claude 3", type: "프롬프트",
+                likes: 376, views: 2970, comments: 41, createdAt: "2024-01-16",
+                prompt: "당신은 교육 전문가입니다. 제공된 주제를 바탕으로 체계적인 교육 자료를 작성해주세요.\n\n[주제]\n{교육 주제}\n\n다음 형식으로 교육 자료를 생성해주세요:\n\n## 학습 목표\n[이 주제를 학습한 후 달성할 수 있는 목표]\n\n## 커리큘럼\n1. [주제 1]\n2. [주제 2]\n...\n\n## 상세 내용\n[각 주제에 대한 상세 설명]\n\n## 퀴즈\n[학습 내용을 확인할 수 있는 퀴즈]",
+                features: ["체계적인 커리큘럼", "학습 목표 설정", "퀴즈 자동 생성", "다양한 난이도 지원"],
+                steps: [
+                    { title: "주제 입력", desc: "교육 자료를 만들 주제를 입력합니다." },
+                    { title: "난이도 선택", desc: "초급, 중급, 고급 중 난이도를 선택합니다." },
+                    { title: "자료 생성", desc: "AI가 교육 자료를 생성합니다." },
+                    { title: "검토 및 수정", desc: "생성된 자료를 검토하고 필요시 수정합니다." }
+                ],
+                reviews: [
+                    { name: "윤지혜 · 교육팀", date: "2024.01.15", text: "교육 자료 제작 시간이 크게 단축되었습니다. 퀴즈도 자동으로 만들어져서 편리해요!" }
+                ]
+            }
+        ];
+        
+        const categories = ["전체", "업무 생산성", "개발 도구", "마케팅", "데이터 분석", "언어", "교육", "디자인", "기타"];
+        const sortOptions = [
+            { value: "인기순", label: "인기순" },
+            { value: "최신순", label: "최신순" },
+            { value: "좋아요순", label: "좋아요순" },
+            { value: "조회수순", label: "조회수순" }
+        ];
+        
+        // 상태 관리
+        let state = {
+            currentPage: 'home',
+            currentToolId: null,
+            tools: [],
+            filteredTools: [],
+            selectedCategory: '전체',
+            searchQuery: '',
+            sortBy: '인기순',
+            currentPageNum: 1,
+            likedTools: new Set(),
+            likedComments: new Set(),
+            commentCounts: new Map(),
+            isLoading: true,
+            ITEMS_PER_PAGE: 12
+        };
+        
+        // 유틸리티 함수
+        function filterAndSortTools(tools, filters) {
+            let filtered = [...tools];
+            if (filters.category && filters.category !== "전체") {
+                filtered = filtered.filter(t => t.category === filters.category);
+            }
+            if (filters.searchQuery.trim()) {
+                const query = filters.searchQuery.toLowerCase();
+                filtered = filtered.filter(t =>
+                    t.title.toLowerCase().includes(query) ||
+                    t.description.toLowerCase().includes(query) ||
+                    t.category.toLowerCase().includes(query) ||
+                    t.aiModel.toLowerCase().includes(query)
+                );
+            }
+            switch (filters.sortBy) {
+                case "인기순":
+                    filtered.sort((a, b) => {
+                        const scoreA = a.likes * 3 + a.views * 0.1 + a.comments * 2;
+                        const scoreB = b.likes * 3 + b.views * 0.1 + b.comments * 2;
+                        return scoreB - scoreA;
+                    });
+                    break;
+                case "최신순":
+                    filtered.sort((a, b) => {
+                        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                        return dateB - dateA;
+                    });
+                    break;
+                case "좋아요순":
+                    filtered.sort((a, b) => b.likes - a.likes);
+                    break;
+                case "조회수순":
+                    filtered.sort((a, b) => b.views - a.views);
+                    break;
+            }
+            return filtered;
+        }
+        
+        function paginateTools(tools, page, itemsPerPage) {
+            const start = (page - 1) * itemsPerPage;
+            return tools.slice(start, start + itemsPerPage);
+        }
+        
+        function getTotalPages(totalItems, itemsPerPage) {
+            return Math.ceil(totalItems / itemsPerPage);
+        }
+        
+        // Toast 알림
+        function showToast(title, description, variant = 'default') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<strong>${title}</strong><br>${description}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        // Firebase 함수들
+        async function loadTools() {
+            state.isLoading = true;
+            try {
+                if (db) {
+                    const snapshot = await db.collection('tools').get();
+                    const firebaseTools = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        firebaseTools.push({
+                            id: data.numericId || doc.id,
+                            ...data,
+                            createdAt: data.createdAt?.toDate?.()?.toISOString()?.split('T')[0] || new Date().toISOString().split('T')[0]
+                        });
+                    });
+                    state.tools = [...firebaseTools, ...defaultTools];
+                } else {
+                    state.tools = defaultTools;
+                }
+                
+                // 모든 도구의 댓글 수 로드
+                await loadAllCommentCounts();
+            } catch (error) {
+                console.error('도구 로딩 실패:', error);
+                state.tools = defaultTools;
+            } finally {
+                state.isLoading = false;
+            }
+        }
+        
+        // 모든 도구의 댓글 수 계산 및 로드
+        async function loadAllCommentCounts() {
+            try {
+                if (db) {
+                    // 모든 댓글 가져오기
+                    const commentsSnapshot = await db.collection('comments').get();
+                    const allComments = [];
+                    commentsSnapshot.forEach(doc => {
+                        const data = doc.data();
+                        allComments.push({
+                            toolId: data.toolId,
+                            parentId: data.parentId || null
+                        });
+                    });
+                    
+                    // 각 도구별로 댓글 수 계산
+                    state.tools.forEach(tool => {
+                        // Firestore 댓글 수 계산
+                        const toolComments = allComments.filter(c => c.toolId === tool.id);
+                        const topLevelComments = toolComments.filter(c => !c.parentId);
+                        const replies = toolComments.filter(c => c.parentId);
+                        
+                        // 리뷰 수
+                        const reviewCount = (tool.reviews || []).length;
+                        
+                        // 총 댓글 수 = 리뷰 + 최상위 댓글 + 대댓글
+                        const totalCount = reviewCount + topLevelComments.length + replies.length;
+                        state.commentCounts.set(tool.id, totalCount);
+                    });
+                } else {
+                    // Firebase 없을 때는 리뷰 수만 사용
+                    state.tools.forEach(tool => {
+                        const reviewCount = (tool.reviews || []).length;
+                        state.commentCounts.set(tool.id, reviewCount);
+                    });
+                }
+            } catch (error) {
+                console.error('댓글 수 로딩 실패:', error);
+                // 에러 시 리뷰 수만 사용
+                state.tools.forEach(tool => {
+                    const reviewCount = (tool.reviews || []).length;
+                    state.commentCounts.set(tool.id, reviewCount);
+                });
+            }
+        }
+        
+        // 조회수 증가 함수
+        async function incrementViews(toolId) {
+            const tool = state.tools.find(t => t.id === toolId);
+            if (!tool) return;
+            
+            // 세션 스토리지에서 이미 조회한 도구인지 확인 (같은 세션에서 중복 방지)
+            const viewedKey = `viewed_${toolId}`;
+            if (sessionStorage.getItem(viewedKey)) {
+                return; // 이미 이 세션에서 조회했으면 증가하지 않음
+            }
+            
+            // 세션 스토리지에 기록
+            sessionStorage.setItem(viewedKey, 'true');
+            
+            // 조회수 증가
+            tool.views = (tool.views || 0) + 1;
+            
+            // Firebase에 업데이트
+            try {
+                if (db) {
+                    // numericId로 도구 찾기
+                    const snapshot = await db.collection('tools').where('numericId', '==', toolId).get();
+                    if (!snapshot.empty) {
+                        const doc = snapshot.docs[0];
+                        await doc.ref.update({
+                            views: firebase.firestore.FieldValue.increment(1)
+                        });
+                    } else {
+                        // Firebase에 없으면 기본 데이터에서만 증가 (Firebase에 저장되지 않은 도구)
+                        console.log('Firebase에 도구가 없어 로컬에서만 조회수 증가');
+                    }
+                }
+            } catch (error) {
+                console.error('조회수 업데이트 실패:', error);
+            }
+        }
+        
+        // 렌더링 함수들
+        async function render() {
+            const app = document.getElementById('app');
+            if (state.currentPage === 'home') {
+                app.innerHTML = renderHome();
+            } else if (state.currentPage === 'detail') {
+                // 상세 페이지 접근 시 조회수 증가
+                if (state.currentToolId) {
+                    await incrementViews(state.currentToolId);
+                }
+                loadLikedComments(state.currentToolId);
+                app.innerHTML = renderDetail();
+                setTimeout(async () => {
+                    await renderComments(state.currentToolId);
+                }, 100);
+            } else if (state.currentPage === 'upload') {
+                app.innerHTML = renderUpload();
+            }
+            attachEventListeners();
+        }
+        
+        function renderHome() {
+            const filtered = filterAndSortTools(state.tools, {
+                category: state.selectedCategory,
+                searchQuery: state.searchQuery,
+                sortBy: state.sortBy
+            });
+            const paginated = paginateTools(filtered, state.currentPageNum, state.ITEMS_PER_PAGE);
+            const totalPages = getTotalPages(filtered.length, state.ITEMS_PER_PAGE);
+            const hasActiveFilters = state.searchQuery !== '' || state.selectedCategory !== '전체' || state.sortBy !== '인기순';
+            
+            return `
+                <header>
+                    <div class="header-content">
+                        <div class="logo" onclick="navigate('home')" style="cursor: pointer;">Visang Market</div>
+                        <button class="btn btn-primary" onclick="navigate('upload')">등록하기</button>
+                    </div>
+                </header>
+                <main class="container" style="padding: 2rem 1rem;">
+                    <div class="search-card" style="margin-bottom: 2rem;">
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                                <div class="search-input-wrapper" style="flex: 1;">
+                                    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                    <input type="text" id="searchInput" class="search-input" placeholder="AI 툴·프롬프트 검색..." value="${state.searchQuery || ''}" oninput="handleSearchInput(event)">
+                                </div>
+                                <div class="filter-wrapper" style="flex-shrink: 0;">
+                                    <svg class="filter-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                                    </svg>
+                                    <select id="sortSelect" class="filter-select">
+                                        ${sortOptions.map(opt => 
+                                            `<option value="${opt.value}" ${state.sortBy === opt.value ? 'selected' : ''}>${opt.label}</option>`
+                                        ).join('')}
+                                    </select>
+                                </div>
+                                ${hasActiveFilters ? `
+                                    <button class="btn btn-secondary" onclick="clearFilters()" style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                        초기화
+                                    </button>
+                                ` : ''}
+                            </div>
+                            ${state.searchQuery ? `
+                                <div id="resultsCount" style="font-size: 0.875rem; color: #6b7280;">
+                                    <span style="font-weight: 600; color: #0891b2;">${filtered.length}</span>개의 결과를 찾았습니다
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 1.5rem;">
+                        <h2 style="font-size: 1.875rem; font-weight: bold; color: #111827; margin-bottom: 0.5rem;">AI 툴·프롬프트</h2>
+                        <p style="color: #6b7280;">업무 생산성을 높이는 다양한 AI 도구와 프롬프트를 만나보세요</p>
+                    </div>
+                    
+                    <div class="category-scroll" style="margin-bottom: 2rem;">
+                        ${categories.map(cat => 
+                            `<button class="category-btn ${state.selectedCategory === cat ? 'active' : ''}" 
+                                     onclick="setCategory('${cat}')">${cat}</button>`
+                        ).join('')}
+                    </div>
+                    
+                    ${state.isLoading ? 
+                        '<div style="text-align: center; padding: 4rem 0;"><div class="spinner"></div><p style="color: #6b7280; margin-top: 1rem;">로딩 중...</p></div>' :
+                        paginated.length > 0 ?
+                            `<div id="toolsContainer" class="grid">
+                                ${paginated.map(tool => `
+                                    <div class="tool-card" onclick="navigate('detail', ${tool.id})">
+                                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                                <span class="badge ${tool.type === 'AI 툴' ? 'badge-tool' : 'badge-prompt'}">${tool.type}</span>
+                                                <span class="badge badge-model">${tool.aiModel}</span>
+                                            </div>
+                                            <span style="font-size: 0.875rem; color: #6b7280;">${tool.category}</span>
+                                        </div>
+                                        <h3 style="font-size: 1.25rem; font-weight: bold; color: #111827; margin-bottom: 0.5rem;">${tool.title}</h3>
+                                        <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 1rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${tool.description}</p>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid #e5e7eb; font-size: 0.875rem; color: #6b7280;">
+                                            <button onclick="event.stopPropagation(); handleLike(${tool.id})" class="like-btn-card" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: ${state.likedTools.has(tool.id) ? '#ef4444' : '#6b7280'}; transition: color 0.2s;">
+                                                <svg width="16" height="16" fill="${state.likedTools.has(tool.id) ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                                </svg>
+                                                <span>${tool.likes}</span>
+                                            </button>
+                                            <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                </svg>
+                                                <span>${tool.views.toLocaleString()}</span>
+                                            </div>
+                                            <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                                </svg>
+                                                <span>${state.commentCounts.get(tool.id) || tool.comments}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ${totalPages > 1 ? `
+                                <div id="paginationContainer" style="margin-top: 2rem; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+                                    <button class="btn btn-secondary" onclick="changePage(${state.currentPageNum - 1})" 
+                                            ${state.currentPageNum === 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                        </svg>
+                                    </button>
+                                    <div style="display: flex; gap: 0.25rem;">
+                                        ${Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            let pageNum;
+                                            if (totalPages <= 5) {
+                                                pageNum = i + 1;
+                                            } else if (state.currentPageNum <= 3) {
+                                                pageNum = i + 1;
+                                            } else if (state.currentPageNum >= totalPages - 2) {
+                                                pageNum = totalPages - 4 + i;
+                                            } else {
+                                                pageNum = state.currentPageNum - 2 + i;
+                                            }
+                                            return `<button class="btn ${state.currentPageNum === pageNum ? 'btn-primary' : 'btn-secondary'}" onclick="changePage(${pageNum})">${pageNum}</button>`;
+                                        }).join('')}
+                                    </div>
+                                    <button class="btn btn-secondary" onclick="changePage(${state.currentPageNum + 1})" 
+                                            ${state.currentPageNum === totalPages ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </button>
+                                    <span style="margin-left: 1rem; font-size: 0.875rem; color: #6b7280;">${state.currentPageNum} / ${totalPages} 페이지</span>
+                                </div>
+                            ` : ''}` :
+                            '<div style="text-align: center; padding: 4rem 0;"><p style="color: #6b7280; font-size: 1.125rem;">검색 결과가 없습니다.</p><p style="color: #9ca3af; font-size: 0.875rem; margin-top: 0.5rem;">다른 검색어나 필터를 시도해보세요.</p></div>'
+                    }
+                </main>
+            `;
+        }
+        
+        function clearFilters() {
+            state.searchQuery = '';
+            state.selectedCategory = '전체';
+            state.sortBy = '인기순';
+            state.currentPageNum = 1;
+            render();
+        }
+        
+        function handleLike(toolId) {
+            const newLikedTools = new Set(state.likedTools);
+            if (newLikedTools.has(toolId)) {
+                newLikedTools.delete(toolId);
+                showToast('좋아요 취소', '좋아요를 취소했습니다.');
+            } else {
+                newLikedTools.add(toolId);
+                showToast('좋아요 추가', '이 도구를 좋아합니다!');
+            }
+            state.likedTools = newLikedTools;
+            localStorage.setItem('likedTools', JSON.stringify(Array.from(newLikedTools)));
+            render();
+        }
+        
+        function handleDetailLike(toolId) {
+            handleLike(toolId);
+        }
+        
+        window.clearFilters = clearFilters;
+        window.handleLike = handleLike;
+        window.handleDetailLike = handleDetailLike;
+        
+        function renderDetail() {
+            const tool = state.tools.find(t => t.id === state.currentToolId);
+            if (!tool) {
+                return '<div>도구를 찾을 수 없습니다.</div>';
+            }
+            const escapedPrompt = tool.prompt ? tool.prompt.replace(/'/g, "\\'").replace(/\n/g, "\\n") : '';
+            return `
+                <header>
+                    <div class="header-content">
+                        <button class="btn" onclick="navigate('home')">← 목록으로</button>
+                        <div class="logo" onclick="navigate('home')" style="cursor: pointer;">Visang Market</div>
+                        <div style="width: 100px;"></div>
+                    </div>
+                </header>
+                <main class="container" style="padding: 2rem 1rem;">
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                            <span style="padding: 0.5rem 1rem; background: linear-gradient(to right, #0891b2, #0284c7); color: white; border-radius: 0.5rem; font-size: 0.875rem;">${tool.aiModel}</span>
+                            <span style="color: #6b7280;">${tool.category}</span>
+                        </div>
+                        <h1 style="font-size: 2rem; margin-bottom: 1rem;">${tool.title}</h1>
+                        <p style="font-size: 1.125rem; line-height: 1.75; color: #374151;">${tool.longDescription || tool.description}</p>
+                        <div style="display: flex; align-items: center; gap: 1.5rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                            <button onclick="handleDetailLike(${tool.id})" class="like-btn-detail" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: color 0.2s; color: ${state.likedTools.has(tool.id) ? '#ef4444' : '#6b7280'};">
+                                <svg width="20" height="20" fill="${state.likedTools.has(tool.id) ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                </svg>
+                                <span style="font-weight: 600;">${tool.likes.toLocaleString()}</span>
+                            </button>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; color: #6b7280;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                <span>${tool.views.toLocaleString()}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; color: #6b7280;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                </svg>
+                                <span>${state.commentCounts.get(tool.id) || tool.comments}</span>
+                            </div>
+                        </div>
+                    </div>
+                    ${tool.features && tool.features.length > 0 ? `
+                        <div class="card" style="margin-bottom: 1.5rem;">
+                            <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">주요 기능</h2>
+                            <ul style="list-style: none; padding: 0;">
+                                ${tool.features.map(f => `<li style="padding: 0.5rem 0; display: flex; align-items: start;">
+                                    <span style="color: #0891b2; margin-right: 0.75rem;">✓</span>
+                                    <span>${f}</span>
+                                </li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    ${tool.prompt ? `
+                        <div class="card" style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h2 style="font-size: 1.5rem;">프롬프트</h2>
+                                <button class="btn btn-primary" onclick="copyPrompt(\`${escapedPrompt}\`)">복사하기</button>
+                            </div>
+                            <pre style="background: #1f2937; color: #f9fafb; padding: 1.5rem; border-radius: 0.75rem; overflow-x: auto; white-space: pre-wrap; font-size: 0.875rem; line-height: 1.75;">${tool.prompt}</pre>
+                        </div>
+                    ` : ''}
+                    ${tool.toolUrl ? `
+                        <div class="card" style="margin-bottom: 1.5rem;">
+                            <h2 style="font-size: 1.5rem; margin-bottom: 1rem;">툴 사용하기</h2>
+                            <a href="${tool.toolUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="display: inline-block;">웹에서 바로 사용하기</a>
+                        </div>
+                    ` : ''}
+                    ${tool.steps && tool.steps.length > 0 ? `
+                        <div class="card" style="margin-bottom: 1.5rem;">
+                            <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">사용 방법</h2>
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                ${tool.steps.map((step, idx) => `
+                                    <div style="display: flex; gap: 1rem;">
+                                        <div style="flex-shrink: 0; width: 2rem; height: 2rem; background: linear-gradient(to right, #0891b2, #0284c7); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">${idx + 1}</div>
+                                        <div>
+                                            <h3 style="font-weight: bold; margin-bottom: 0.25rem;">${step.title}</h3>
+                                            <p style="color: #6b7280;">${step.desc}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    <div id="commentsSection"></div>
+                </main>
+            `;
+        }
+        
+        async function renderComments(toolId) {
+            const section = document.getElementById('commentsSection');
+            if (!section) return;
+            
+            const tool = state.tools.find(t => t.id === toolId);
+            if (!tool) return;
+            
+            // 좋아요 상태 로드 (답글 포함)
+            loadLikedComments(toolId);
+            
+            let comments = [];
+            try {
+                if (db) {
+                    const snapshot = await db.collection('comments').where('toolId', '==', toolId).get();
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        comments.push({
+                            id: doc.id,
+                            toolId: data.toolId,
+                            author: data.author || '김비상',
+                            content: data.content,
+                            likes: data.likes || 0,
+                            createdAt: data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+                            parentId: data.parentId || null
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('댓글 로딩 실패:', error);
+            }
+            
+            // 리뷰를 댓글 형태로 변환
+            const reviewComments = (tool.reviews || []).map((review, idx) => {
+                const dateParts = review.date.split('.');
+                const dateStr = dateParts.length === 3 ? 
+                    `${dateParts[0]}-${dateParts[1].padStart(2, '0')}-${dateParts[2].padStart(2, '0')}` : 
+                    new Date().toISOString().split('T')[0];
+                return {
+                    id: `review-${idx}`,
+                    toolId: toolId,
+                    author: review.name,
+                    content: review.text,
+                    likes: 0,
+                    createdAt: dateStr,
+                    parentId: null
+                };
+            });
+            
+            const allComments = [...reviewComments, ...comments.filter(c => !c.parentId)];
+            const replies = comments.filter(c => c.parentId);
+            
+            allComments.forEach(comment => {
+                comment.replies = replies.filter(r => r.parentId === comment.id);
+            });
+            
+            const totalCount = allComments.reduce((acc, c) => acc + 1 + (c.replies?.length || 0), 0);
+            state.commentCounts.set(toolId, totalCount);
+            
+            // 메인 페이지가 현재 페이지면 다시 렌더링하여 댓글 수 업데이트
+            if (state.currentPage === 'home') {
+                render();
+            }
+            
+            section.innerHTML = `
+                <div class="card">
+                    <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem;">사용자 리뷰 및 댓글 (${totalCount})</h2>
+                    <form onsubmit="handleCommentSubmit(event, ${toolId})" style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid #e5e7eb;">
+                        <textarea id="newComment" placeholder="댓글을 입력하세요..." required style="margin-bottom: 1rem; min-height: 80px;"></textarea>
+                        <button type="submit" class="btn btn-primary">댓글 작성</button>
+                    </form>
+                    ${allComments.length === 0 ? 
+                        '<p style="text-align: center; color: #6b7280; padding: 2rem;">아직 댓글이 없습니다. 첫 댓글을 작성해보세요!</p>' :
+                        allComments.map(comment => `
+                            <div style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e5e7eb;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <div>
+                                        <span style="font-weight: 600;">${comment.author}</span>
+                                        <span style="color: #6b7280; font-size: 0.875rem; margin-left: 0.5rem;">
+                                            ${new Date(comment.createdAt).toLocaleDateString('ko-KR')}
+                                        </span>
+                                    </div>
+                                </div>
+                                <p style="color: #374151; margin-bottom: 0.75rem;">${comment.content}</p>
+                                <div style="display: flex; gap: 1rem;">
+                                    <button onclick="handleCommentLike('${comment.id}', ${comment.likes})" class="like-btn-comment" style="background: none; border: none; cursor: pointer; color: ${state.likedComments.has(comment.id) ? '#ef4444' : '#6b7280'}; display: flex; align-items: center; gap: 0.5rem; transition: color 0.2s;">
+                                        <svg width="20" height="20" fill="${state.likedComments.has(comment.id) ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                        </svg>
+                                        <span style="font-weight: 600;">${comment.likes}</span>
+                                    </button>
+                                    <button onclick="toggleReply('${comment.id}')" style="background: none; border: none; cursor: pointer; color: #6b7280;">답글</button>
+                                </div>
+                                <div id="replyForm-${comment.id}" style="display: none; margin-top: 1rem; margin-left: 1rem; padding-left: 1rem; border-left: 2px solid #0891b2;">
+                                    <form onsubmit="handleReplySubmit(event, ${toolId}, '${comment.id}')">
+                                        <textarea placeholder="답글을 입력하세요..." required style="margin-bottom: 0.5rem; min-height: 60px;"></textarea>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button type="submit" class="btn btn-primary" style="padding: 0.5rem 1rem;">답글 작성</button>
+                                            <button type="button" onclick="toggleReply('${comment.id}')" class="btn" style="padding: 0.5rem 1rem;">취소</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                ${comment.replies && comment.replies.length > 0 ? `
+                                    <div style="margin-top: 1rem; margin-left: 1rem; padding-left: 1rem; border-left: 2px solid #e5e7eb;">
+                                        ${comment.replies.map(reply => `
+                                            <div style="margin-bottom: 1rem;">
+                                                <div style="margin-bottom: 0.25rem;">
+                                                    <span style="font-weight: 600; font-size: 0.875rem;">${reply.author}</span>
+                                                    <span style="color: #6b7280; font-size: 0.75rem; margin-left: 0.5rem;">
+                                                        ${new Date(reply.createdAt).toLocaleDateString('ko-KR')}
+                                                    </span>
+                                                </div>
+                                                <p style="color: #374151; font-size: 0.875rem; margin-bottom: 0.5rem;">${reply.content}</p>
+                                                <button onclick="handleCommentLike('${reply.id}', ${reply.likes})" class="like-btn-comment" style="background: none; border: none; cursor: pointer; color: ${state.likedComments.has(reply.id) ? '#ef4444' : '#6b7280'}; font-size: 0.75rem; display: flex; align-items: center; gap: 0.5rem; transition: color 0.2s;">
+                                                    <svg width="16" height="16" fill="${state.likedComments.has(reply.id) ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                                    </svg>
+                                                    <span style="font-weight: 600;">${reply.likes}</span>
+                                                </button>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            `;
+        }
+        
+        async function handleCommentSubmit(e, toolId) {
+            e.preventDefault();
+            const textarea = e.target.querySelector('textarea');
+            const content = textarea.value.trim();
+            if (!content) return;
+            
+            try {
+                if (db) {
+                    await db.collection('comments').add({
+                        toolId: toolId,
+                        author: '김비상',
+                        content: content,
+                        likes: 0,
+                        parentId: null,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                showToast('댓글 등록 완료', '댓글이 성공적으로 등록되었습니다.');
+                textarea.value = '';
+                // 댓글 수 다시 로드
+                await loadAllCommentCounts();
+                await renderComments(toolId);
+                render();
+            } catch (error) {
+                console.error('댓글 등록 실패:', error);
+                showToast('댓글 등록 실패', '댓글 등록 중 오류가 발생했습니다.', 'destructive');
+            }
+        }
+        
+        async function handleReplySubmit(e, toolId, parentId) {
+            e.preventDefault();
+            const textarea = e.target.querySelector('textarea');
+            const content = textarea.value.trim();
+            if (!content) return;
+            
+            try {
+                if (db) {
+                    await db.collection('comments').add({
+                        toolId: toolId,
+                        author: '김비상',
+                        content: content,
+                        likes: 0,
+                        parentId: parentId,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+                showToast('답글 등록 완료', '답글이 성공적으로 등록되었습니다.');
+                textarea.value = '';
+                toggleReply(parentId);
+                // 댓글 수 다시 로드
+                await loadAllCommentCounts();
+                await renderComments(toolId);
+                render();
+            } catch (error) {
+                console.error('답글 등록 실패:', error);
+                showToast('답글 등록 실패', '답글 등록 중 오류가 발생했습니다.', 'destructive');
+            }
+        }
+        
+        function toggleReply(commentId) {
+            const form = document.getElementById(`replyForm-${commentId}`);
+            if (form) {
+                form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+        
+        async function handleCommentLike(commentId, currentLikes) {
+            const isLiked = state.likedComments.has(commentId);
+            const newLikedComments = new Set(state.likedComments);
+            
+            try {
+                if (db) {
+                    await db.collection('comments').doc(commentId).update({
+                        likes: firebase.firestore.FieldValue.increment(isLiked ? -1 : 1)
+                    });
+                }
+                
+                if (isLiked) {
+                    newLikedComments.delete(commentId);
+                } else {
+                    newLikedComments.add(commentId);
+                }
+                
+                state.likedComments = newLikedComments;
+                localStorage.setItem(`likedComments_${state.currentToolId}`, JSON.stringify(Array.from(newLikedComments)));
+                
+                await renderComments(state.currentToolId);
+                render();
+            } catch (error) {
+                console.error('공감 실패:', error);
+            }
+        }
+        
+        window.handleCommentSubmit = handleCommentSubmit;
+        window.handleReplySubmit = handleReplySubmit;
+        window.toggleReply = toggleReply;
+        window.handleCommentLike = handleCommentLike;
+        
+        function renderUpload() {
+            const uploadState = state.uploadState || {
+                type: 'prompt',
+                title: '',
+                description: '',
+                category: '',
+                aiModel: '',
+                promptContent: '',
+                toolUrl: '',
+                features: [],
+                steps: [],
+                selectedFile: null
+            };
+            
+            const aiModels = ['GPT-4', 'Claude 3', 'Gemini Pro', 'Llama 2', 'GPT-3.5', 'Claude 2', '기타'];
+            
+            return `
+                <header>
+                    <div class="header-content">
+                        <button class="btn" onclick="navigate('home')">← 뒤로가기</button>
+                        <div class="logo" onclick="navigate('home')" style="cursor: pointer;">Visang Market</div>
+                        <div style="width: 100px;"></div>
+                    </div>
+                </header>
+                <main class="container" style="padding: 2rem 1rem;">
+                    <div class="card">
+                        <h2 style="font-size: 1.875rem; font-weight: bold; margin-bottom: 0.5rem;">AI 툴·프롬프트 등록</h2>
+                        <p style="color: #6b7280; margin-bottom: 2rem;">새로운 AI 도구나 프롬프트를 등록하고 공유해보세요</p>
+                        <form onsubmit="handleUploadSubmit(event)" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                            <!-- 유형 선택 -->
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                    유형 <span style="color: #ef4444;">*</span>
+                                </label>
+                                <div style="display: flex; gap: 1rem;">
+                                    <label style="flex: 1; cursor: pointer;">
+                                        <input type="radio" name="type" value="prompt" ${uploadState.type === 'prompt' ? 'checked' : ''} onchange="updateUploadState('type', 'prompt')" style="display: none;">
+                                        <div style="padding: 1rem 1.5rem; background: ${uploadState.type === 'prompt' ? 'rgba(6, 182, 212, 0.1)' : 'rgba(255, 255, 255, 0.8)'}; border: 2px solid ${uploadState.type === 'prompt' ? '#06b6d4' : '#e5e7eb'}; border-radius: 0.75rem; text-align: center; transition: all 0.2s;">
+                                            <div style="font-weight: 600; color: #111827;">프롬프트</div>
+                                            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">AI에게 입력할 텍스트</div>
+                                        </div>
+                                    </label>
+                                    <label style="flex: 1; cursor: pointer;">
+                                        <input type="radio" name="type" value="tool" ${uploadState.type === 'tool' ? 'checked' : ''} onchange="updateUploadState('type', 'tool')" style="display: none;">
+                                        <div style="padding: 1rem 1.5rem; background: ${uploadState.type === 'tool' ? 'rgba(6, 182, 212, 0.1)' : 'rgba(255, 255, 255, 0.8)'}; border: 2px solid ${uploadState.type === 'tool' ? '#06b6d4' : '#e5e7eb'}; border-radius: 0.75rem; text-align: center; transition: all 0.2s;">
+                                            <div style="font-weight: 600; color: #111827;">AI 툴</div>
+                                            <div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">다운로드/사용 가능한 도구</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- 제목 -->
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                    제목 <span style="color: #ef4444;">*</span>
+                                </label>
+                                <input type="text" name="title" value="${uploadState.title || ''}" oninput="updateUploadStateWithoutRender('title', this.value)" onblur="updateUploadState('title', this.value)" placeholder="예: 회의록 자동 정리" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: rgba(255, 255, 255, 0.8); font-size: 1rem;">
+                            </div>
+                            
+                            <!-- 요약 설명 -->
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                    요약 설명 <span style="color: #ef4444;">*</span>
+                                </label>
+                                <textarea name="description" oninput="updateUploadStateWithoutRender('description', this.value)" onblur="updateUploadState('description', this.value)" placeholder="이 툴이나 프롬프트가 어떤 기능을 하는지 간단히 설명해주세요" required rows="3" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: rgba(255, 255, 255, 0.8); font-size: 1rem; resize: vertical;">${uploadState.description || ''}</textarea>
+                            </div>
+                            
+                            <!-- 카테고리와 AI 모델 -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div>
+                                    <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                        카테고리 <span style="color: #ef4444;">*</span>
+                                    </label>
+                                    <select name="category" value="${uploadState.category}" onchange="updateUploadState('category', this.value)" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: rgba(255, 255, 255, 0.8); font-size: 1rem;">
+                                        <option value="">카테고리 선택</option>
+                                        ${categories.filter(c => c !== '전체').map(c => `<option value="${c}" ${uploadState.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                        AI 모델 <span style="color: #ef4444;">*</span>
+                                    </label>
+                                    <select name="aiModel" value="${uploadState.aiModel}" onchange="updateUploadState('aiModel', this.value)" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: rgba(255, 255, 255, 0.8); font-size: 1rem;">
+                                        <option value="">AI 모델 선택</option>
+                                        ${aiModels.map(m => `<option value="${m}" ${uploadState.aiModel === m ? 'selected' : ''}>${m}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- 주요 기능 (선택) -->
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                    주요 기능 (선택)
+                                </label>
+                                <div id="featuresContainer" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                    ${(uploadState.features || []).map((f, idx) => `
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <input type="text" value="${f || ''}" oninput="updateFeature(${idx}, this.value)" onblur="updateFeature(${idx}, this.value); render();" placeholder="주요 기능을 입력하세요" style="flex: 1; padding: 0.5rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: rgba(255, 255, 255, 0.8);">
+                                            <button type="button" onclick="removeFeature(${idx})" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer;">삭제</button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <button type="button" onclick="addFeature()" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #e5e7eb; color: #374151; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">+ 기능 추가</button>
+                            </div>
+                            
+                            <!-- 사용 방법 (선택) -->
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                    사용 방법 (선택)
+                                </label>
+                                <div id="stepsContainer" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                    ${(uploadState.steps || []).map((step, idx) => `
+                                        <div style="display: flex; gap: 0.5rem; align-items: start;">
+                                            <div style="flex-shrink: 0; width: 2rem; height: 2rem; background: linear-gradient(to right, #0891b2, #0284c7); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.875rem;">${idx + 1}</div>
+                                            <div style="flex: 1; display: flex; flex-direction: column; gap: 0.5rem;">
+                                                <input type="text" value="${step.title || ''}" oninput="updateStepTitle(${idx}, this.value)" onblur="updateStepTitle(${idx}, this.value); render();" placeholder="단계 제목" style="padding: 0.5rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: rgba(255, 255, 255, 0.8);">
+                                                <input type="text" value="${step.desc || ''}" oninput="updateStepDesc(${idx}, this.value)" onblur="updateStepDesc(${idx}, this.value); render();" placeholder="단계 설명" style="padding: 0.5rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: rgba(255, 255, 255, 0.8);">
+                                            </div>
+                                            <button type="button" onclick="removeStep(${idx})" style="padding: 0.5rem 1rem; background: #ef4444; color: white; border: none; border-radius: 0.5rem; cursor: pointer; align-self: start;">삭제</button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <button type="button" onclick="addStep()" style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #e5e7eb; color: #374151; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">+ 단계 추가</button>
+                            </div>
+                            
+                            ${uploadState.type === 'prompt' ? `
+                                <!-- 프롬프트 내용 -->
+                                <div>
+                                    <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                        프롬프트 내용 <span style="color: #ef4444;">*</span>
+                                    </label>
+                                    <textarea name="promptContent" oninput="updateUploadStateWithoutRender('promptContent', this.value)" onblur="updateUploadState('promptContent', this.value)" placeholder="프롬프트의 전체 내용을 입력해주세요" required rows="8" style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: rgba(255, 255, 255, 0.8); font-size: 0.875rem; font-family: monospace; resize: vertical;">${uploadState.promptContent || ''}</textarea>
+                                </div>
+                            ` : `
+                                <!-- 툴 URL -->
+                                <div>
+                                    <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                        툴 URL <span style="color: #ef4444;">*</span>
+                                    </label>
+                                    <input type="url" name="toolUrl" value="${uploadState.toolUrl || ''}" oninput="updateUploadStateWithoutRender('toolUrl', this.value)" onblur="updateUploadState('toolUrl', this.value)" placeholder="https://example.com/tool" required style="width: 100%; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; background: rgba(255, 255, 255, 0.8); font-size: 1rem;">
+                                    <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">다운로드 가능한 파일 URL 또는 웹에서 바로 사용할 수 있는 링크를 입력하세요</p>
+                                </div>
+                            `}
+                            
+                            <!-- 파일 첨부 (선택) -->
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+                                    파일 첨부 (선택)
+                                </label>
+                                <div style="border: 2px dashed #d1d5db; border-radius: 0.75rem; padding: 2rem; text-align: center; background: rgba(255, 255, 255, 0.5); cursor: pointer;" onclick="document.getElementById('fileUpload').click()">
+                                    ${!uploadState.selectedFile ? `
+                                        <div>
+                                            <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: #9ca3af; margin: 0 auto 1rem;">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                            </svg>
+                                            <span style="color: #0891b2; font-weight: 500;">파일을 선택</span>
+                                            <span style="color: #6b7280;">하거나 드래그하세요</span>
+                                            <input type="file" id="fileUpload" onchange="handleFileSelect(event)" style="display: none;" accept="${uploadState.type === 'prompt' ? '.txt,.pdf,.doc,.docx' : '.zip,.exe,.dmg,.py,.js,.html,.ipynb'}">
+                                            <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">
+                                                ${uploadState.type === 'prompt' ? 'TXT, PDF, DOC, DOCX (최대 10MB)' : 'ZIP, EXE, DMG, PY, JS, HTML, IPYNB (최대 50MB)'}
+                                            </p>
+                                        </div>
+                                    ` : `
+                                        <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(6, 182, 212, 0.1); padding: 1rem; border-radius: 0.5rem;">
+                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                                <div style="width: 2.5rem; height: 2.5rem; background: rgba(6, 182, 212, 0.2); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
+                                                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24" style="color: #0891b2;">
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path>
+                                                        <path d="M14 2v6h6"></path>
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p style="font-size: 0.875rem; font-weight: 500; color: #111827;">${uploadState.selectedFile.name}</p>
+                                                    <p style="font-size: 0.75rem; color: #6b7280;">${(uploadState.selectedFile.size / 1024).toFixed(2)} KB</p>
+                                                </div>
+                                            </div>
+                                            <button type="button" onclick="event.stopPropagation(); removeFile();" style="background: none; border: none; color: #9ca3af; cursor: pointer; padding: 0.5rem;">
+                                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    `}
+                                </div>
+                            </div>
+                            
+                            <!-- 제출 버튼 -->
+                            <div style="display: flex; gap: 1rem; padding-top: 1rem;">
+                                <button type="button" onclick="navigate('home')" class="btn btn-secondary" style="flex: 1;">취소</button>
+                                <button type="submit" class="btn btn-primary" style="flex: 1;">등록하기</button>
+                            </div>
+                        </form>
+                    </div>
+                </main>
+            `;
+        }
+        
+        // 업로드 상태 관리
+        if (!state.uploadState) {
+            state.uploadState = {
+                type: 'prompt',
+                title: '',
+                description: '',
+                category: '',
+                aiModel: '',
+                promptContent: '',
+                toolUrl: '',
+                features: [],
+                steps: [],
+                selectedFile: null
+            };
+        }
+        
+        function updateUploadState(key, value) {
+            if (!state.uploadState) {
+                state.uploadState = {
+                    type: 'prompt',
+                    title: '',
+                    description: '',
+                    category: '',
+                    aiModel: '',
+                    promptContent: '',
+                    toolUrl: '',
+                    features: [],
+                    steps: [],
+                    selectedFile: null
+                };
+            }
+            state.uploadState[key] = value;
+            render();
+        }
+        
+        function updateUploadStateWithoutRender(key, value) {
+            if (!state.uploadState) {
+                state.uploadState = {
+                    type: 'prompt',
+                    title: '',
+                    description: '',
+                    category: '',
+                    aiModel: '',
+                    promptContent: '',
+                    toolUrl: '',
+                    features: [],
+                    steps: [],
+                    selectedFile: null
+                };
+            }
+            state.uploadState[key] = value;
+            // 렌더링하지 않음 - 입력 중 값이 사라지는 것을 방지
+        }
+        
+        function addFeature() {
+            if (!state.uploadState) state.uploadState = { features: [], steps: [] };
+            if (!state.uploadState.features) state.uploadState.features = [];
+            state.uploadState.features.push('');
+            render();
+        }
+        
+        function updateFeature(index, value) {
+            if (!state.uploadState || !state.uploadState.features) return;
+            state.uploadState.features[index] = value;
+        }
+        
+        function removeFeature(index) {
+            if (!state.uploadState || !state.uploadState.features) return;
+            state.uploadState.features.splice(index, 1);
+            render();
+        }
+        
+        function addStep() {
+            if (!state.uploadState) state.uploadState = { features: [], steps: [] };
+            if (!state.uploadState.steps) state.uploadState.steps = [];
+            state.uploadState.steps.push({ title: '', desc: '' });
+            render();
+        }
+        
+        function updateStepTitle(index, value) {
+            if (!state.uploadState || !state.uploadState.steps) return;
+            if (!state.uploadState.steps[index]) state.uploadState.steps[index] = { title: '', desc: '' };
+            state.uploadState.steps[index].title = value;
+        }
+        
+        function updateStepDesc(index, value) {
+            if (!state.uploadState || !state.uploadState.steps) return;
+            if (!state.uploadState.steps[index]) state.uploadState.steps[index] = { title: '', desc: '' };
+            state.uploadState.steps[index].desc = value;
+        }
+        
+        function removeStep(index) {
+            if (!state.uploadState || !state.uploadState.steps) return;
+            state.uploadState.steps.splice(index, 1);
+            render();
+        }
+        
+        function handleFileSelect(e) {
+            if (e.target.files && e.target.files[0]) {
+                if (!state.uploadState) state.uploadState = {};
+                state.uploadState.selectedFile = e.target.files[0];
+                render();
+            }
+        }
+        
+        function removeFile() {
+            if (!state.uploadState) return;
+            state.uploadState.selectedFile = null;
+            const fileInput = document.getElementById('fileUpload');
+            if (fileInput) fileInput.value = '';
+            render();
+        }
+        
+        window.updateUploadState = updateUploadState;
+        window.updateUploadStateWithoutRender = updateUploadStateWithoutRender;
+        window.handleSearchInput = handleSearchInput;
+        window.addFeature = addFeature;
+        window.updateFeature = updateFeature;
+        window.removeFeature = removeFeature;
+        window.addStep = addStep;
+        window.updateStepTitle = updateStepTitle;
+        window.updateStepDesc = updateStepDesc;
+        window.removeStep = removeStep;
+        window.handleFileSelect = handleFileSelect;
+        window.removeFile = removeFile;
+        
+        // 검색 입력 핸들러 (디바운스 적용)
+        let searchTimeout = null;
+        function handleSearchInput(e) {
+            const value = e.target.value;
+            state.searchQuery = value;
+            state.currentPageNum = 1;
+            
+            // 검색 결과만 즉시 업데이트 (입력 필드는 그대로 유지)
+            updateSearchResults();
+            
+            // 디바운스: 입력이 끝난 후 300ms 후에 전체 렌더링 (선택적)
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+            searchTimeout = setTimeout(() => {
+                // 필요시 전체 렌더링 (현재는 updateSearchResults만 사용)
+            }, 300);
+        }
+        
+        // 검색 결과만 업데이트하는 함수
+        function updateSearchResults() {
+            const filtered = filterAndSortTools(state.tools, {
+                category: state.selectedCategory,
+                searchQuery: state.searchQuery,
+                sortBy: state.sortBy
+            });
+            const paginated = paginateTools(filtered, state.currentPageNum, state.ITEMS_PER_PAGE);
+            const totalPages = getTotalPages(filtered.length, state.ITEMS_PER_PAGE);
+            
+            // 검색 결과 영역만 업데이트
+            const resultsContainer = document.getElementById('toolsContainer');
+            const paginationContainer = document.getElementById('paginationContainer');
+            const resultsCount = document.getElementById('resultsCount');
+            
+            if (resultsContainer) {
+                if (paginated.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div style="text-align: center; padding: 3rem; color: #6b7280;">
+                            <p>${filtered.length}개의 결과를 찾았습니다</p>
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = paginated.map(tool => {
+                        const isLiked = state.likedTools.has(tool.id);
+                        return `
+                            <div class="tool-card" onclick="navigate('detail', ${tool.id})">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                        <span class="badge ${tool.type === 'AI 툴' ? 'badge-tool' : 'badge-prompt'}">${tool.type}</span>
+                                        <span class="badge badge-model">${tool.aiModel}</span>
+                                    </div>
+                                    <span style="font-size: 0.875rem; color: #6b7280;">${tool.category}</span>
+                                </div>
+                                <h3 style="font-size: 1.25rem; font-weight: bold; color: #111827; margin-bottom: 0.5rem;">${tool.title}</h3>
+                                <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 1rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${tool.description}</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid #e5e7eb; font-size: 0.875rem; color: #6b7280;">
+                                    <button onclick="event.stopPropagation(); handleLike(${tool.id})" class="like-btn-card" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; color: ${isLiked ? '#ef4444' : '#6b7280'}; transition: color 0.2s;">
+                                        <svg width="16" height="16" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                        </svg>
+                                        <span>${tool.likes}</span>
+                                    </button>
+                                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                        <span>${tool.views.toLocaleString()}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                        </svg>
+                                        <span>${state.commentCounts.get(tool.id) ?? tool.comments}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+            
+            if (resultsCount) {
+                resultsCount.textContent = `${filtered.length}개의 결과를 찾았습니다`;
+            }
+            
+            if (paginationContainer) {
+                if (totalPages > 1) {
+                    paginationContainer.innerHTML = `
+                        <button class="btn btn-secondary" onclick="changePage(${state.currentPageNum - 1})" 
+                                ${state.currentPageNum === 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                        <div style="display: flex; gap: 0.25rem;">
+                            ${Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                    pageNum = i + 1;
+                                } else if (state.currentPageNum <= 3) {
+                                    pageNum = i + 1;
+                                } else if (state.currentPageNum >= totalPages - 2) {
+                                    pageNum = totalPages - 4 + i;
+                                } else {
+                                    pageNum = state.currentPageNum - 2 + i;
+                                }
+                                return `<button class="btn ${state.currentPageNum === pageNum ? 'btn-primary' : 'btn-secondary'}" onclick="changePage(${pageNum})">${pageNum}</button>`;
+                            }).join('')}
+                        </div>
+                        <button class="btn btn-secondary" onclick="changePage(${state.currentPageNum + 1})" 
+                                ${state.currentPageNum === totalPages ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                        <span style="margin-left: 1rem; font-size: 0.875rem; color: #6b7280;">${state.currentPageNum} / ${totalPages} 페이지</span>
+                    `;
+                } else {
+                    paginationContainer.innerHTML = '';
+                }
+            }
+        }
+        
+        // 이벤트 핸들러
+        function attachEventListeners() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                // 인라인 oninput이 이미 있으므로 여기서는 추가하지 않음
+                // 하지만 기존 이벤트 리스너가 있다면 제거
+                const newSearchInput = searchInput.cloneNode(true);
+                searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+            }
+            const sortSelect = document.getElementById('sortSelect');
+            if (sortSelect) {
+                sortSelect.addEventListener('change', (e) => {
+                    state.sortBy = e.target.value;
+                    state.currentPageNum = 1;
+                    render();
+                });
+            }
+        }
+        
+        function setCategory(cat) {
+            state.selectedCategory = cat;
+            state.currentPageNum = 1;
+            render();
+        }
+        
+        function changePage(page) {
+            state.currentPageNum = page;
+            render();
+        }
+        
+        function navigate(page, id = null) {
+            state.currentPage = page;
+            state.currentToolId = id;
+            render();
+        }
+        
+        function copyPrompt(text) {
+            navigator.clipboard.writeText(text.replace(/\\n/g, '\n'));
+            showToast('복사 완료', '프롬프트가 클립보드에 복사되었습니다.');
+        }
+        
+        async function handleUploadSubmit(e) {
+            e.preventDefault();
+            
+            if (!state.uploadState) {
+                showToast('등록 실패', '폼 데이터를 불러올 수 없습니다.', 'destructive');
+                return;
+            }
+            
+            const uploadState = state.uploadState;
+            
+            // 필수 필드 검증
+            if (!uploadState.title || !uploadState.description || !uploadState.category || !uploadState.aiModel) {
+                showToast('등록 실패', '필수 항목을 모두 입력해주세요.', 'destructive');
+                return;
+            }
+            
+            if (uploadState.type === 'prompt' && !uploadState.promptContent) {
+                showToast('등록 실패', '프롬프트 내용을 입력해주세요.', 'destructive');
+                return;
+            }
+            
+            if (uploadState.type === 'tool' && !uploadState.toolUrl) {
+                showToast('등록 실패', '툴 URL을 입력해주세요.', 'destructive');
+                return;
+            }
+            
+            const toolData = {
+                title: uploadState.title,
+                description: uploadState.description,
+                category: uploadState.category,
+                aiModel: uploadState.aiModel,
+                type: uploadState.type === 'prompt' ? '프롬프트' : 'AI 툴',
+                likes: 0,
+                views: 0,
+                comments: 0,
+                createdAt: new Date().toISOString().split('T')[0]
+            };
+            
+            // 프롬프트인 경우
+            if (uploadState.type === 'prompt') {
+                toolData.prompt = uploadState.promptContent;
+            } else {
+                // AI 툴인 경우
+                toolData.toolUrl = uploadState.toolUrl;
+            }
+            
+            // 선택 필드 추가
+            if (uploadState.features && uploadState.features.length > 0) {
+                toolData.features = uploadState.features.filter(f => f.trim() !== '');
+            }
+            
+            if (uploadState.steps && uploadState.steps.length > 0) {
+                toolData.steps = uploadState.steps.filter(s => s.title.trim() !== '' || s.desc.trim() !== '');
+            }
+            
+            try {
+                if (db) {
+                    const numericId = Date.now() % 1000000;
+                    await db.collection('tools').add({ ...toolData, numericId });
+                }
+                
+                // 폼 초기화
+                state.uploadState = {
+                    type: 'prompt',
+                    title: '',
+                    description: '',
+                    category: '',
+                    aiModel: '',
+                    promptContent: '',
+                    toolUrl: '',
+                    features: [],
+                    steps: [],
+                    selectedFile: null
+                };
+                
+                showToast('등록 완료', 'AI 툴·프롬프트가 성공적으로 등록되었습니다!');
+                navigate('home');
+                await loadTools();
+                render();
+            } catch (error) {
+                console.error('등록 실패:', error);
+                showToast('등록 실패', '등록 중 오류가 발생했습니다.', 'destructive');
+            }
+        }
+        
+        // 전역 함수로 노출
+        window.navigate = navigate;
+        window.setCategory = setCategory;
+        window.changePage = changePage;
+        window.copyPrompt = copyPrompt;
+        window.handleUploadSubmit = handleUploadSubmit;
+        
+        // 댓글 좋아요 상태 로드
+        function loadLikedComments(toolId) {
+            if (!toolId) {
+                state.likedComments = new Set();
+                return;
+            }
+            const stored = localStorage.getItem(`likedComments_${toolId}`);
+            if (stored) {
+                try {
+                    state.likedComments = new Set(JSON.parse(stored));
+                } catch (e) {
+                    state.likedComments = new Set();
+                }
+            } else {
+                state.likedComments = new Set();
+            }
+        }
+        
+        // 초기화
+        async function init() {
+            await loadTools();
+            const stored = localStorage.getItem('likedTools');
+            if (stored) {
+                try {
+                    state.likedTools = new Set(JSON.parse(stored));
+                } catch (e) {}
+            }
+            render();
+        }
+        
+        init();
+
+        // Iframe Auto Resize using postMessage
+        const sendHeight = () => {
+            const height = document.documentElement.scrollHeight;
+            window.parent.postMessage({ type: 'resize', height: height }, '*');
+        };
+
+        const resizeObserver = new ResizeObserver(sendHeight);
+        resizeObserver.observe(document.body);
+        
+        // Also send on load to ensure initial size is correct
+        window.addEventListener('load', sendHeight);
+    </script>
+</body>
+</html>

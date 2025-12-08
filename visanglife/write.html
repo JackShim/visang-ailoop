@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>새 글 작성</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script>
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyC2IkRFY9POOJFc2NP3mMqD4T_YqLPFXmQ",
+        authDomain: "vivalife-503d0.firebaseapp.com",
+        projectId: "vivalife-503d0",
+        storageBucket: "vivalife-503d0.appspot.com",
+        messagingSenderId: "405115176188",
+        appId: "1:405115176188:web:bd53f4787ed12bdc194379",
+        measurementId: "G-PSCM4YP11J"
+      };
+    
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+    </script>
+    <style>
+        :root {
+            --primary-color: #00b5e2;
+            --secondary-color: #6a71f6;
+            --bg-color: #f8f9fa;
+            --text-color: #2b2b2b;
+            --light-color: #ffffff;
+            --border-color: #e9ecef;
+            --sidebar-bg: #fdfdfd;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            --sidebar-width: 280px; /* 사이드바 기본 너비 변수 */
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        body.is-resizing {
+            user-select: none;
+            cursor: col-resize;
+        }
+        .container {
+            width: 100%;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* --- 헤더 --- */
+        .main-header {
+            background: var(--light-color);
+            padding: 1.2rem 0;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .main-header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .write-button {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        .write-button:hover {
+            background-color: var(--secondary-color);
+        }
+        .header-search {
+            flex-grow: 1;
+            max-width: 600px;
+            display: flex;
+            align-items: center;
+        }
+        #searchInput {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 20px 0 0 20px;
+            border-right: none;
+            outline: none;
+        }
+        #searchInput:focus {
+            border-color: var(--primary-color);
+        }
+        .search-button {
+            padding: 10px 15px; /* 패딩 줄여서 크기 조절 */
+            font-size: 1.2rem; /* 화살표가 잘 보이도록 크기 키움 */
+            line-height: 1; /* 라인 높이 조절 */
+            cursor: pointer;
+            background-color: var(--primary-color);
+            color: var(--light-color); /* 화살표 색상 유지 */
+            border: 1px solid var(--primary-color);
+            border-left: none; /* 검색창과 이어지도록 왼쪽 테두리 제거 */
+            border-radius: 0 20px 20px 0; /* 오른쪽 모서리만 둥글게 */
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .search-button:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+
+        /* --- 메인 레이아웃 --- */
+        .main-layout {
+            display: flex;
+        }
+        
+        /* --- 사이드바 --- */
+        .sidebar {
+            flex: 0 0 var(--sidebar-width);
+            padding: 20px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            position: relative;
+            min-width: 200px;
+            max-width: 500px;
+        }
+        .resizer {
+            position: absolute;
+            top: 0;
+            right: -2.5px;
+            width: 5px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+        }
+        .category-nav h3 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            padding-left: 10px;
+        }
+        .category-nav a {
+            display: block;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            text-decoration: none;
+            color: #555;
+            border-radius: 8px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .category-nav a:hover { background-color: #eef; }
+        .category-nav a.active {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            font-weight: 600;
+        }
+
+        /* --- 콘텐츠 --- */
+        .content-main {
+            flex: 1;
+            padding: 20px 30px;
+            min-width: 0;
+        }
+        .write-form-container {
+            max-width: 800px; /* 폼의 최대 너비 유지 */
+            margin: 0 auto; /* content-main 내에서 중앙 정렬 */
+            background: var(--light-color);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        .write-form-container h1 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+        .form-group textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+        .form-group input[type="password"] {
+            -webkit-text-security: disc;
+        }
+        .form-actions {
+            text-align: right;
+        }
+        .submit-btn {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .submit-btn:hover {
+            background-color: #0099c2;
+        }
+    </style>
+</head>
+<body>
+    <header class="main-header">
+        <div class="container">
+            <a href="index.html" class="logo">VISANG LIFE</a>
+            <div class="search-container header-search">
+                <input type="text" id="searchInput" placeholder="관심사, 태그 등으로 검색">
+                <button id="searchButton" class="search-button">&#10140;</button>
+            </div>
+            <a href="write.html" class="write-button">글쓰기</a>
+        </div>
+    </header>
+
+    <div class="container main-layout">
+        <aside class="sidebar" id="sidebar">
+            <nav class="category-nav">
+                <h3>카테고리</h3>
+                <a href="#" class="category-link active" data-category="all">전체 보기</a>
+                <a href="#" class="category-link" data-category="총무타임"># 총무타임</a>
+                <a href="#" class="category-link" data-category="동호회"># 동호회</a>
+                <a href="#" class="category-link" data-category="헬프데스크"># 헬프데스크</a>
+                <a href="#" class="category-link" data-category="교육문화활동비"># 교육문화활동비</a>
+                <a href="#" class="category-link" data-category="비바미"># 비바미</a>
+                <a href="#" class="category-link" data-category="맛집추천"># 맛집추천</a>
+                <a href="#" class="category-link" data-category="출퇴근"># 출퇴근</a>
+                <a href="#" class="category-link" data-category="주차"># 주차</a>
+                <a href="#" class="category-link" data-category="기타"># 기타</a>
+            </nav>
+            <div class="resizer" id="resizer"></div>
+        </aside>
+
+        <main class="content-main">
+            <div class="write-form-container">
+                <h1>새 글 작성</h1>
+                <form id="writeForm">
+                    <div class="form-group">
+                        <label for="title">제목</label>
+                        <input type="text" id="title" name="title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="category">카테고리</label>
+                        <select id="category" name="category" required>
+                            <option value="총무타임">총무타임</option>
+                            <option value="동호회">동호회</option>
+                            <option value="헬프데스크">헬프데스크</option>
+                            <option value="교육문화활동비">교육문화활동비</option>
+                            <option value="비바미">비바미</option>
+                            <option value="맛집추천">맛집추천</option>
+                            <option value="출퇴근">출퇴근</option>
+                            <option value="주차">주차</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="author">작성자</label>
+                        <input type="text" id="author" name="author" value="visang" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">비밀번호 (숫자 6자리)</label>
+                        <input type="password" id="password" name="password" required pattern="[0-9]{6}" title="숫자 6자리를 입력해주세요." maxlength="6" inputmode="numeric">
+                    </div>
+                    <div class="form-group">
+                        <label for="content">내용</label>
+                        <textarea id="content" name="content" required></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="submit-btn">작성하기</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- 사이드바 리사이즈 기능 ---
+            const resizer = document.getElementById('resizer');
+            const sidebar = document.getElementById('sidebar');
+
+            const savedSidebarWidth = localStorage.getItem('sidebarWidth');
+            if (sidebar && savedSidebarWidth) {
+                sidebar.style.flexBasis = savedSidebarWidth;
+            }
+
+            const resize = (e) => {
+                const newWidth = e.clientX - sidebar.getBoundingClientRect().left;
+                sidebar.style.flexBasis = `${newWidth}px`;
+            };
+
+            const stopResize = () => {
+                document.removeEventListener('mousemove', resize);
+                document.removeEventListener('mouseup', stopResize);
+                document.body.classList.remove('is-resizing');
+                localStorage.setItem('sidebarWidth', sidebar.style.flexBasis);
+            };
+
+            if (resizer) {
+                resizer.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    document.addEventListener('mousemove', resize);
+                    document.addEventListener('mouseup', stopResize);
+                    document.body.classList.add('is-resizing');
+                });
+            }
+
+            // --- 카테고리 및 검색 기능 (index.html로 리디렉션) ---
+            const searchInput = document.getElementById('searchInput');
+            const searchButton = document.getElementById('searchButton');
+            const categoryLinks = document.querySelectorAll('.category-link');
+
+            categoryLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const category = link.dataset.category;
+                    window.location.href = `index.html?category=${category}`;
+                });
+            });
+
+            const performSearch = () => {
+                const searchTerm = searchInput.value.trim();
+                if (searchTerm) {
+                    window.location.href = `index.html?search=${searchTerm}`;
+                }
+            };
+
+            searchButton.addEventListener('click', performSearch);
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    performSearch();
+                }
+            });
+
+            // --- 폼 제출 기능 ---
+            document.getElementById('writeForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const submitButton = e.target.querySelector('.submit-btn');
+                submitButton.disabled = true;
+                submitButton.textContent = '저장 중...';
+
+                const formData = new FormData(e.target);
+                const newPost = {
+                    title: formData.get('title'),
+                    category: formData.get('category'),
+                    author: formData.get('author'),
+                    password: formData.get('password'),
+                    content: formData.get('content'),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                db.collection("posts").add(newPost)
+                    .then(() => {
+                        console.log("Document successfully written!");
+                        window.location.href = 'index.html';
+                    })
+                    .catch((error) => {
+                        console.error("Error writing document: ", error);
+                        alert('게시글 저장에 실패했습니다. 다시 시도해주세요.');
+                        submitButton.disabled = false;
+                        submitButton.textContent = '작성하기';
+                    });
+            });
+        });
+    </script>
+</body>
+</html>
