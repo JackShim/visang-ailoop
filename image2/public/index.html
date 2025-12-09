@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VISANG.AI - Internal Image Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --main: #00b5e2;
+            --sub: #6a71f6;
+            --text: #2b2b2b;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --light-gray: #f4f7f9;
+            --border-color: #e2e8f0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Noto Sans KR', sans-serif; background-color: var(--light-gray); color: var(--text); }
+        main { max-width: 1200px; margin: 32px auto; padding: 0 24px; }
+        .glass { background: white; border-radius: 16px; box-shadow: var(--shadow); padding: 2rem; position: relative; }
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .header { background-color: white; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); padding: 0 2rem; display: flex; justify-content: space-between; align-items: center; height: 64px; position: sticky; top: 0; z-index: 1000; }
+        .logo { font-size: 1.5rem; font-weight: 700; color: var(--main); cursor: pointer; }
+        .nav-right { display: flex; align-items: center; gap: 1.5rem; }
+        .nav-link { cursor: pointer; color: #4a5568; font-weight: 500; padding: 20px 4px; border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s; }
+        .nav-link:hover { color: var(--main); }
+        .nav-link.active { color: var(--main); border-bottom-color: var(--main); font-weight: 700; }
+        .btn { padding: 10px 22px; border-radius: 999px; border: none; cursor: pointer; font-size: 15px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, var(--main), var(--sub)); color: #ffffff; box-shadow: 0 8px 20px rgba(0, 181, 226, 0.25); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 25px rgba(0, 181, 226, 0.35); }
+        .btn-ghost { background: #f0f3f5; color: var(--text); border: 1px solid var(--border-color); }
+        .hamburger, .mobile-nav-menu { display: none; }
+
+        .section-title { text-align: center; font-size: 32px; margin-bottom: 16px; }
+        .search-container {
+            position: absolute;
+            top: 1.75rem;
+            right: 2rem;
+            display: flex;
+            align-items: center;
+            background-color: #f1f3f5;
+            border: 1px solid var(--border-color);
+            border-radius: 22px;
+            padding: 2px;
+            transition: all 0.3s ease;
+        }
+        .search-container:focus-within {
+            border-color: var(--main);
+            box-shadow: 0 0 0 3px rgba(0, 181, 226, 0.2);
+        }
+        .search-icon {
+            width: 18px;
+            height: 18px;
+            margin: 0 4px 0 8px;
+            color: #868e96;
+        }
+        #search-input {
+            position: static;
+            border: none;
+            background: transparent;
+            outline: none;
+            padding: 8px 12px 8px 0;
+            width: 200px;
+            font-size: 15px;
+            color: var(--text);
+        }
+        #search-input::placeholder {
+            color: #adb5bd;
+        }
+        .section-desc { text-align: center; font-size: 18px; color: #666; max-width: 600px; margin: 0 auto 32px; }
+
+        .main-content-wrapper {
+            display: flex;
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .category-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 200px;
+            flex-shrink: 0;
+            background-color: #f8f9fa;
+            padding: 16px;
+            border-radius: 12px;
+            align-self: flex-start;
+        }
+
+        .category-btn {
+            padding: 10px 16px;
+            border: 1px solid transparent;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+            width: 100%;
+            text-align: left;
+            color: #333;
+        }
+
+        .category-btn:hover {
+            background-color: #e9ecef;
+        }
+
+        .category-btn.active {
+            background: var(--main);
+            color: white;
+            font-weight: 700;
+        }
+        .category-btn.category-btn-all {
+            background-color: rgba(0, 181, 226, 0.1);
+            color: var(--main);
+            font-weight: 700;
+        }
+        .category-btn.category-btn-all.active,
+        .category-btn.category-btn-all:hover {
+            background: var(--main);
+            color: white;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            flex-grow: 1;
+        }
+        .gallery-item {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+        .gallery-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .gallery-image-wrapper {
+            position: relative;
+        }
+        .gallery-item-image {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            background: #f0f0f0;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+        .ai-badge-card {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+            backdrop-filter: blur(4px);
+        }
+        .gallery-item-info {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+        .gallery-item-category {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--sub);
+            margin-bottom: 8px;
+        }
+        .gallery-item-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            line-height: 1.4;
+            color: var(--text);
+            flex-grow: 1;
+        }
+        .gallery-item-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #888;
+            border-top: 1px solid var(--border-color);
+            padding-top: 12px;
+            margin-top: auto;
+        }
+        .gallery-item-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .gallery-item-actions .btn { font-size: 14px; padding: 6px 16px; }
+
+        .popup-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1001; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .popup-overlay.active { display: flex; }
+        .popup { background: white; padding: 40px; border-radius: 24px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: popupSlideIn 0.3s ease; }
+        @keyframes popupSlideIn { from { opacity: 0; transform: translateY(-50px); } to { opacity: 1; transform: translateY(0); } }
+        .popup-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .close-btn { background: none; border: none; font-size: 32px; color: #999; cursor: pointer; }
+        
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            color: #999;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .drop-zone.dragover {
+            border-color: var(--main);
+            background-color: rgba(0, 181, 226, 0.05);
+        }
+        .drop-zone p {
+            margin: 0;
+        }
+        
+        .form-group { margin-bottom: 24px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 16px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 14px; border: 2px solid var(--border-color); border-radius: 12px; font-size: 16px; font-family: 'Noto Sans KR', sans-serif; transition: border-color 0.2s ease; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--main); }
+        .form-group textarea { resize: vertical; min-height: 120px; }
+        .image-preview { margin-top: 16px; border-radius: 12px; overflow: hidden; }
+        .image-preview img { width: 100%; max-height: 400px; object-fit: contain; border-radius: 12px; }
+
+        .detail-content { display: grid; grid-template-columns: 1fr 1fr; grid-template-areas: "image info" "similar similar"; gap: 40px; padding-top: 1rem; }
+        .detail-image-container { grid-area: image; }
+        .detail-info-container { grid-area: info; }
+        .detail-similar-container { grid-area: similar; }
+        .detail-image { width: 100%; border-radius: 16px; box-shadow: var(--shadow); }
+        .detail-info-container h2 { font-size: 32px; margin-bottom: 16px; }
+        .detail-category { display: inline-block; padding: 6px 16px; background: rgba(0, 181, 226, 0.1); color: var(--main); border-radius: 12px; font-weight: 500; margin-bottom: 20px; }
+        .detail-description { font-size: 16px; line-height: 1.8; color: #666; margin-bottom: 32px; white-space: pre-wrap; }
+        .detail-meta-info { padding: 20px; background: #f8f9fa; border-radius: 12px; margin-bottom: 24px; }
+        .detail-meta-info p { margin-bottom: 8px; color: #666; }
+        .detail-actions { display: flex; gap: 12px; }
+        .similar-items-section { margin-top: 40px; padding-top: 30px; border-top: 1px solid var(--border-color); }
+        .similar-items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 20px; }
+        .similar-item-card { cursor: pointer; border-radius: 12px; overflow: hidden; transition: transform 0.2s ease; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .similar-item-card:hover { transform: translateY(-5px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+        .similar-item-card img { width: 100%; height: 100px; object-fit: cover; background: #f0f0f0; }
+        .similar-item-card h6 { font-size: 14px; font-weight: 500; padding: 10px 8px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333; }
+        .empty-gallery { text-align: center; padding: 80px 20px; color: #999; }
+        
+        /* --- Custom Form Elements --- */
+
+        /* Radio Button Customization */
+        .form-group-radio .radio-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: normal;
+        }
+        .form-group-radio input[type="radio"] {
+            display: none; /* Hide default radio */
+        }
+        .form-group-radio .radio-custom {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            transition: all 0.2s;
+            position: relative;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        .form-group-radio input[type="radio"]:checked + .radio-custom {
+            border-color: var(--main);
+        }
+        .form-group-radio input[type="radio"]:checked + .radio-custom::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background-color: var(--main);
+            border-radius: 50%;
+        }
+
+        /* Checkbox Customization */
+        .form-group-checkbox label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: normal;
+            white-space: nowrap;
+        }
+        .form-group-checkbox input[type="checkbox"] {
+            display: none; /* Hide default checkbox */
+        }
+        .form-group-checkbox .checkbox-custom {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            margin-right: 10px;
+            transition: all 0.2s;
+            position: relative;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        .form-group-checkbox input[type="checkbox"]:checked + .checkbox-custom {
+            background-color: var(--main);
+            border-color: var(--main);
+        }
+        .form-group-checkbox input[type="checkbox"]:checked + .checkbox-custom::after {
+            content: '✔';
+            position: absolute;
+            color: white;
+            font-size: 16px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            line-height: 1; /* Adjust for better vertical alignment of checkmark */
+        }
+
+
+        /* Select Dropdown Customization */
+        .custom-select-wrapper {
+            position: relative;
+        }
+        .custom-select-wrapper::after {
+            content: '▼';
+            font-size: 12px;
+            color: #999;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%); /* Adjust vertical alignment */
+            pointer-events: none; /* Let clicks pass through to the select */
+        }
+        .custom-select-wrapper select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            padding-right: 40px; /* Make space for the arrow */
+        }
+
+        #toast-container {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .toast {
+            padding: 16px 24px;
+            background-color: rgba(51, 51, 51, 0.9); /* Dark gray for default toast */
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            font-size: 16px;
+            font-weight: 500;
+            animation: toast-fade-in 0.3s ease forwards, toast-fade-out 0.3s ease 4.7s forwards;
+            opacity: 0;
+            min-width: 250px;
+            text-align: center;
+        }
+        .toast.success {
+            background-color: var(--main); /* Blue for success */
+        }
+        .toast.error {
+            background-color: rgba(220, 53, 69, 0.9); /* Red for error */
+        }
+        @keyframes toast-fade-in {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes toast-fade-out {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
+        }
+        
+        footer { margin: 48px auto; text-align: center; color: #888; }
+        
+        @media (max-width: 768px) {
+            .header { padding: 0 1rem; }
+            .nav-right { display: none; }
+            .hamburger { display: flex; flex-direction: column; gap: 4px; padding: 8px; }
+            .hamburger span { width: 22px; height: 2px; background: #333; }
+            .mobile-nav-menu { display: block; position: absolute; top: 64px; left: -100%; right: 100%; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: left 0.3s ease, right 0.3s ease; }
+            .mobile-nav-menu.active { left: 0; right: 0; }
+            .mobile-nav-menu .nav-link, .mobile-nav-menu .btn { display: block; padding: 1rem; text-align: center; border-bottom: 1px solid var(--border-color); }
+            .detail-content { grid-template-columns: 1fr; grid-template-areas: "image" "info" "similar"; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div id="logo" class="logo" data-page="home">VISANG.AI</div>
+        <nav class="nav-right">
+            <a class="nav-link" data-page="home">Home</a>
+            <a class="nav-link" data-page="library">My Library</a>
+            <a class="nav-link" data-page="help">Help</a>
+            <button class="btn btn-primary" id="upload-btn-desktop">Upload</button>
+        </nav>
+        <div id="hamburger" class="hamburger"><span></span><span></span><span></span></div>
+        <div id="mobile-nav-menu" class="mobile-nav-menu">
+            <a class="nav-link" data-page="home">Home</a>
+            <a class="nav-link" data-page="library">My Library</a>
+            <a class="nav-link" data-page="help">Help</a>
+            <button class="btn btn-primary" id="upload-btn-mobile">Upload</button>
+        </div>
+    </header>
+
+    <div id="home" class="page">
+        <main>
+            <section class="glass">
+                <div class="search-container">
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="search" id="search-input" placeholder="제목 또는 설명으로 검색...">
+                </div>
+                <h2 class="section-title">Image Gallery</h2>
+                <div class="main-content-wrapper">
+                    <nav class="category-sidebar" id="category-filter-container"></nav>
+                    <div id="galleryGrid" class="gallery-grid"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <div id="library" class="page">
+        <main>
+            <section class="glass">
+                <h2 class="section-title">My Library</h2>
+                <p class="section-desc">소속, 이름, 비밀번호를 입력하여 내가 등록한 이미지들을 확인, 수정, 삭제할 수 있습니다.</p>
+                <div style="margin-bottom: 32px; display: flex; justify-content: center; flex-wrap: wrap; gap: 1rem;">
+                    <input type="text" id="author-search-department" placeholder="소속을 입력하세요..." style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 20px; width: 100%; max-width: 250px; font-size: 15px;">
+                    <input type="text" id="author-search-name" placeholder="이름을 입력하세요..." style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 20px; width: 100%; max-width: 250px; font-size: 15px;">
+                    <input type="password" id="password-search-input" placeholder="비밀번호 (숫자 4자리)..." style="padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 20px; width: 100%; max-width: 250px; font-size: 15px;">
+                </div>
+                <div id="myGalleryGrid" class="gallery-grid">
+                    <div class="empty-gallery"><p>소속, 이름, 비밀번호를 입력하면 내가 올린 이미지를 볼 수 있습니다.</p></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="help" class="page">
+        <main>
+            <section class="glass">
+                <h1 style="text-align: center; margin-bottom: 2rem;">Help / 사용 가이드</h1>
+                <div>
+                    <h2 style="font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">이미지 등록하기</h2>
+                    <p style="margin-bottom: 1rem;">1. 상단의 'Upload' 버튼을 클릭하세요.</p>
+                    <p style="margin-bottom: 1rem;">2. 팝업창에서 필수 정보들을 입력합니다. '미노출'을 선택하면 작성자 정보가 '익명'으로 표시됩니다.</p>
+                    <p style="margin-bottom: 1rem;">3. '등록하기' 버튼을 누르면 이미지가 갤러리에 추가됩니다. <strong>비밀번호는 수정/삭제 시 필요하므로 반드시 기억해주세요.</strong></p>
+                </div>
+                <div style="margin-top: 2.5rem;">
+                    <h2 style="font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">내 이미지 관리하기 (My Library)</h2>
+                    <p style="margin-bottom: 1rem;">1. 상단 메뉴에서 'My Library'를 클릭하세요.</p>
+                    <p style="margin-bottom: 1rem;">2. 이미지를 등록할 때 사용했던 '소속', '이름', '비밀번호'를 모두 입력하면, 해당 정보로 등록된 이미지 목록이 나타납니다.</p>
+                    <p style="margin-bottom: 1rem;">3. 각 이미지의 '수정' 또는 '삭제' 버튼을 눌러 관리할 수 있습니다.</p>
+                </div>
+                <div style="margin-top: 2.5rem;">
+                    <h2 style="font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">업로드 규칙</h2>
+                    <ul style="list-style-position: inside; padding-left: 1rem;">
+                        <li style="margin-bottom: 0.5rem;">업무와 관련된 이미지만 업로드해주세요.</li>
+                        <li style="margin-bottom: 0.5rem;">저작권에 위배되지 않는 이미지만 사용 가능합니다.</li>
+                        <li style="margin-bottom: 0.5rem;">타인을 비방하거나 불쾌감을 줄 수 있는 이미지는 등록할 수 없습니다.</li>
+                    </ul>
+                </div>
+                <div style="margin-top: 2.5rem;">
+                    <h2 style="font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">담당자 안내</h2>
+                    <p>문의사항은 아래 담당자에게 연락주시기 바랍니다.</p>
+                    <p style="margin-top: 1rem;"><strong>부서:</strong> AI Lab</p>
+                    <p style="margin-top: 0.5rem;"><strong>담당자:</strong> 홍길동 (gildong.hong@visang.ai)</p>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <footer><p>© 2025 VISANG AI Lab. All rights reserved.</p></footer>
+
+    <div id="toast-container"></div>
+    
+    <div id="registerPopup" class="popup-overlay">
+        <div class="popup">
+            <div class="popup-header"><h2>이미지 등록하기</h2><button class="close-btn">&times;</button></div>
+            <form id="registerForm" novalidate>
+                <div class="form-group"><label for="imageTitle">제목 *</label><input type="text" id="imageTitle" placeholder="이미지 제목을 입력하세요" required></div>
+                <div class="form-group custom-select-wrapper">
+                    <label for="imageCategory">카테고리 *</label>
+                    <select id="imageCategory" required>
+                        <option value="">카테고리를 선택하세요</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="imageDescription">설명 *</label>
+                    <textarea id="imageDescription" placeholder="작업 방향을 잡을 때 참고용으로 사용한 이미지예요. 색감이나 느낌을 파악하는 데 도움이 되었어요." required></textarea>
+                </div>
+                <div class="form-group form-group-checkbox">
+                    <label>
+                        <input type="checkbox" id="isAiGenerated">
+                        <span class="checkbox-custom"></span>
+                        AI로 생성된 이미지입니다.
+                    </label>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-bottom: 24px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="imageDepartment">소속 *</label>
+                        <input type="text" id="imageDepartment" placeholder="예: 한국어사업개발cell">
+                        <p style="font-size: 12px; color: #888; margin-top: 4px;">띄어쓰기 없이 작성</p>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="imageName">이름 *</label>
+                        <input type="text" id="imageName" placeholder="예: 양지영">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="imagePassword">비밀번호 (숫자 4자리) *</label>
+                    <input type="password" id="imagePassword" inputmode="numeric" pattern="[0-9]{4}" title="숫자 4자리를 입력하세요." maxlength="4" placeholder="수정/삭제 시 사용할 숫자 4자리" required>
+                </div>
+                <div class="form-group form-group-radio">
+                    <label>작성자 정보 노출</label>
+                    <div style="display: flex; gap: 1.5rem;">
+                        <label class="radio-label">
+                            <input type="radio" name="anonymous" value="false" checked>
+                            <span class="radio-custom"></span>
+                            노출
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="anonymous" value="true">
+                            <span class="radio-custom"></span>
+                            미노출 (익명)
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="imageFile">이미지 파일 *</label>
+                    <div id="dropZone" class="drop-zone">
+                        <p>여기에 파일을 드래그하거나, 이 영역을 클릭하여 업로드하세요.</p>
+                        <input type="file" id="imageFile" accept="image/*" required style="display: none;">
+                    </div>
+                    <div id="imagePreview" class="image-preview" style="display: none;"><img id="previewImg" src="" alt="미리보기"></div>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 32px;"><button type="button" class="btn btn-ghost" id="cancel-upload-btn">취소</button><button type="submit" class="btn btn-primary">등록하기</button></div>
+            </form>
+        </div>
+    </div>
+    <div id="successPopup" class="popup-overlay">
+        <div class="popup" style="max-width: 400px; text-align: center;">
+            <div class="popup-header" style="justify-content: center;">
+                <h2>등록 완료</h2>
+            </div>
+            <p style="margin-bottom: 2rem;">이미지가 성공적으로 등록되었습니다.</p>
+            <button id="success-popup-close-btn" class="btn btn-primary">확인</button>
+        </div>
+    </div>
+    <div id="detailPopup" class="popup-overlay">
+        <div class="popup" style="max-width: 1000px;">
+            <div class="popup-header"><h2>이미지 상세</h2><button class="close-btn">&times;</button></div>
+            <div id="detailContent" class="detail-content"></div>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- App State ---
+        let images = JSON.parse(localStorage.getItem('visangImages') || '[]');
+        let currentFilter = '전체';
+        let searchTerm = '';
+        let editingImageId = null;
+        const categories = ["전체", "캐릭터", "아이콘", "배경", "소품", "기타"];
+
+        // --- DOM Elements ---
+        const pageContainer = { home: document.getElementById('home'), library: document.getElementById('library'), help: document.getElementById('help'), };
+        const nav = {
+            logo: document.getElementById('logo'),
+            desktopLinks: document.querySelectorAll('.nav-right .nav-link'),
+            mobileLinks: document.querySelectorAll('.mobile-nav-menu .nav-link'),
+            hamburger: document.getElementById('hamburger'),
+            mobileMenu: document.getElementById('mobile-nav-menu'),
+        };
+        const popups = { register: document.getElementById('registerPopup'), detail: document.getElementById('detailPopup'), success: document.getElementById('successPopup') };
+        const galleryGrid = document.getElementById('galleryGrid');
+        const myGalleryGrid = document.getElementById('myGalleryGrid');
+        const categoryFilterContainer = document.getElementById('category-filter-container');
+        const searchInput = document.getElementById('search-input');
+        const authorSearchDepartment = document.getElementById('author-search-department');
+        const authorSearchName = document.getElementById('author-search-name');
+        const passwordSearchInput = document.getElementById('password-search-input');
+        
+        // --- Toast Notification ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3300); // 3300ms = 0.3s (fade-in) + 2.7s (hold) + 0.3s (fade-out)
+        }
+        
+        // --- Page Switching ---
+        const showPage = (pageId) => {
+            Object.values(pageContainer).forEach(p => p.classList.remove('active'));
+            if (pageContainer[pageId]) pageContainer[pageId].classList.add('active');
+            const allLinks = [...nav.desktopLinks, ...nav.mobileLinks];
+            allLinks.forEach(link => link.classList.toggle('active', link.dataset.page === pageId));
+            if (nav.mobileMenu.classList.contains('active')) nav.mobileMenu.classList.remove('active');
+        }
+
+        // --- Popup Handling ---
+        const openPopup = (popupId) => popups[popupId].classList.add('active');
+        const closePopup = (popupId) => {
+            popups[popupId].classList.remove('active');
+            if (popupId === 'register') {
+                document.getElementById('registerForm').reset();
+                document.getElementById('imagePreview').style.display = 'none';
+                document.getElementById('imageFile').required = true;
+                editingImageId = null;
+            }
+        }
+        
+        // --- Main App Logic ---
+        const escapeHtml = (text) => {
+            if (text === null || text === undefined) return '';
+            return text.toString().replace(/[&<>]"'/g, match => ({'&': '&amp;','<': '&lt;','>': '&gt;','"': '&quot;',"'": '&#39;'})[match]);
+        }
+
+        const renderCategories = () => {
+            const categorySelect = document.getElementById('imageCategory');
+            categorySelect.innerHTML = '<option value="">카테고리를 선택하세요</option>';
+            categories.filter(c => c !== '전체').forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                categorySelect.appendChild(option);
+            });
+
+            if(categoryFilterContainer) {
+                categoryFilterContainer.innerHTML = categories.map(cat => {
+                    const isAllCategory = cat === '전체';
+                    const specialClass = isAllCategory ? 'category-btn-all' : '';
+                    return `<button class="category-btn ${specialClass} ${cat === currentFilter ? 'active' : ''}" data-category="${cat}">${cat}</button>`;
+                }).join('');
+                document.querySelectorAll('.category-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        currentFilter = e.currentTarget.dataset.category;
+                        if(searchInput) searchInput.value = '';
+                        searchTerm = '';
+                        document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                        e.currentTarget.classList.add('active');
+                        renderGallery();
+                    });
+                });
+            }
+        }
+
+        const renderGallery = () => {
+            if (!galleryGrid) return;
+            let filteredImages = images;
+            if (currentFilter !== '전체') filteredImages = filteredImages.filter(img => img.category === currentFilter);
+            if (searchTerm) {
+                filteredImages = filteredImages.filter(img => 
+                    (img.title && img.title.toLowerCase().includes(searchTerm)) ||
+                    (img.description && img.description.toLowerCase().includes(searchTerm))
+                );
+            }
+            if (filteredImages.length === 0) {
+                galleryGrid.innerHTML = `<div class="empty-gallery" style="grid-column: 1 / -1;"><p>결과가 없습니다.</p></div>`; return;
+            }
+            galleryGrid.innerHTML = filteredImages.map(image => {
+                const authorDisplay = (image.isAnonymous || !image.name || image.name.trim() === '')
+                    ? '익명'
+                    : `${image.department ? image.department + ' ' : ''}${image.name}`;
+                const uploadDate = image.uploadDate ? new Date(image.uploadDate).toLocaleDateString('ko-KR') : '날짜 없음';
+                const aiBadge = image.isAiGenerated ? '<span class="ai-badge-card">AI</span>' : '';
+
+                return `
+                <div class="gallery-item" onclick="showImageDetail(${image.id})">
+                    <div class="gallery-image-wrapper">
+                        <img class="gallery-item-image" src="${image.imageUrl}" alt="${escapeHtml(image.title)}">
+                        ${aiBadge}
+                    </div>
+                    <div class="gallery-item-info">
+                        <span class="gallery-item-category">${escapeHtml(image.category)}</span>
+                        <h5 class="gallery-item-title">${escapeHtml(image.title)}</h5>
+                        <div class="gallery-item-meta">
+                            <span>by <strong>${escapeHtml(authorDisplay)}</strong></span>
+                            <span>${uploadDate}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        const renderMyLibrary = () => {
+            if (!myGalleryGrid) return;
+            const department = authorSearchDepartment.value;
+            const name = authorSearchName.value;
+            const password = passwordSearchInput.value;
+            let myImages = [];
+            if (department && name && password) {
+                myImages = images.filter(img => img.department === department && img.name === name && img.password === password);
+            }
+            if (myImages.length === 0) {
+                myGalleryGrid.innerHTML = `<div class="empty-gallery"><p>입력한 정보와 일치하는 이미지가 없습니다.</p></div>`;
+                return;
+            }
+            myGalleryGrid.innerHTML = myImages.map(image => `
+                <div class="gallery-item">
+                    <img class="gallery-item-image" src="${image.imageUrl}" alt="${escapeHtml(image.title)}" onclick="showImageDetail(${image.id})">
+                    <div class="gallery-item-info">
+                        <div class="gallery-item-title">${escapeHtml(image.title)}</div>
+                        <span class="gallery-item-category">${escapeHtml(image.category)}</span>
+                        <div class="gallery-item-actions">
+                            <button class="btn btn-ghost" onclick="editImage(${image.id})">수정</button>
+                            <button class="btn btn-ghost" style="color: #e53e3e;" onclick="deleteImage(${image.id})">삭제</button>
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+
+        window.showImageDetail = (imageId) => {
+            const image = images.find(img => img.id === imageId); if (!image) return;
+            const detailContent = document.getElementById('detailContent');
+            const authorDisplay = (image.isAnonymous || !image.name || image.name.trim() === '')
+                ? '익명'
+                : `${image.department ? image.department + ' ' : ''}${image.name}`;
+            const aiBadge = image.isAiGenerated ? '<span class="ai-badge">AI Generated</span>' : '';
+            detailContent.innerHTML = `<div class="detail-image-container"><img src="${image.imageUrl}" alt="${escapeHtml(image.title)}" class="detail-image"></div>
+                <div class="detail-info-container"><h2>${escapeHtml(image.title)}${aiBadge}</h2><span class="detail-category">${escapeHtml(image.category)}</span>
+                <div class="detail-description">${image.description ? escapeHtml(image.description).replace(/\\n/g, '<br>') : '<p style="color: #888;"><i>작성된 설명이 없습니다.</i></p>'}</div>
+                <div class="detail-meta-info"><p><strong>등록일:</strong> ${image.uploadDate}</p><p><strong>작성자:</strong> ${escapeHtml(authorDisplay)}</p></div>
+                <div class="detail-actions"><button class="btn btn-primary" onclick="downloadImage(${image.id})">다운로드</button></div></div>`;
+            openPopup('detail');
+        }
+        
+        window.downloadImage = (imageId) => {
+            const image = images.find(img => img.id === imageId); if (!image) return;
+            const link = document.createElement('a'); link.href = image.imageUrl; link.download = image.fileName || 'image.png';
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+
+        window.editImage = (imageId) => {
+            const image = images.find(img => img.id === imageId); if (!image) return;
+            editingImageId = imageId;
+            document.getElementById('imageTitle').value = image.title;
+            document.getElementById('imageDepartment').value = image.department;
+            document.getElementById('imageName').value = image.name;
+            document.getElementById('imagePassword').value = image.password;
+            document.getElementById('imageDescription').value = image.description;
+            document.getElementById('imageCategory').value = image.category;
+            document.querySelector('input[name="anonymous"][value="' + image.isAnonymous + '"]').checked = true;
+            document.getElementById('isAiGenerated').checked = image.isAiGenerated || false;
+            document.getElementById('imageFile').required = false;
+            document.querySelector('#registerPopup .popup-header h2').textContent = "이미지 수정하기";
+            openPopup('register');
+        }
+
+        window.deleteImage = (imageId) => {
+            if (confirm('정말로 이 이미지를 삭제하시겠습니까?')) {
+                images = images.filter(img => img.id !== imageId);
+                localStorage.setItem('visangImages', JSON.stringify(images));
+                renderGallery();
+                renderMyLibrary();
+            }
+        }
+
+        function handleImageRegister(e) {
+            e.preventDefault();
+            const title = document.getElementById('imageTitle').value.trim();
+            const department = document.getElementById('imageDepartment').value.trim();
+            const name = document.getElementById('imageName').value.trim();
+            const isAnonymous = document.querySelector('input[name="anonymous"]:checked').value === 'true';
+            const password = document.getElementById('imagePassword').value;
+            const description = document.getElementById('imageDescription').value.trim();
+            const category = document.getElementById('imageCategory').value;
+            const file = document.getElementById('imageFile').files[0];
+            const isAiGenerated = document.getElementById('isAiGenerated').checked;
+
+            if (!/^\d{4}$/.test(password)) {
+                showToast('비밀번호는 숫자 4자리여야 합니다.', 'error'); return;
+            }
+            if (!isAnonymous && (!department || !name)) {
+                showToast('정보 노출 시 소속과 이름은 필수 항목입니다.', 'error'); return;
+            }
+            
+            if (editingImageId) {
+                const imageIndex = images.findIndex(img => img.id === editingImageId);
+                if (imageIndex > -1) {
+                    const existingImage = images[imageIndex];
+                    const updatedImageData = { ...existingImage, title, department, name, isAnonymous, password, description, category, isAiGenerated };
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            updatedImageData.imageUrl = e.target.result;
+                            updatedImageData.fileName = file.name;
+                            images[imageIndex] = updatedImageData;
+                            updateAndRender();
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        images[imageIndex] = updatedImageData;
+                        updateAndRender();
+                    }
+                }
+            } else {
+                if (!title || !category || !description || !file) {
+                    showToast('제목, 카테고리, 설명, 이미지 파일은 필수 항목입니다.', 'error');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imageData = { id: Date.now(), title, department, name, isAnonymous, password, description, category, imageUrl: e.target.result, fileName: file.name, uploadDate: new Date().toLocaleString('ko-KR'), isAiGenerated };
+                    images.unshift(imageData);
+                    updateAndRender();
+                    showPage('home');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateAndRender() {
+            localStorage.setItem('visangImages', JSON.stringify(images));
+            
+            openPopup('success');
+
+            closePopup('register');
+            editingImageId = null;
+            document.querySelector('#registerPopup .popup-header h2').textContent = "이미지 등록하기";
+            renderGallery();
+            renderMyLibrary();
+        }
+        
+        function setupImagePreview() {
+            const fileInput = document.getElementById('imageFile');
+            const preview = document.getElementById('imagePreview');
+            const previewImg = document.getElementById('previewImg');
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => { previewImg.src = e.target.result; preview.style.display = 'block'; };
+                    reader.readAsDataURL(file);
+                } else { preview.style.display = 'none'; }
+            });
+        }
+
+        // --- Event Listeners Setup ---
+        nav.logo.addEventListener('click', () => showPage('home'));
+        nav.hamburger.addEventListener('click', () => nav.mobileMenu.classList.toggle('active'));
+        [...nav.desktopLinks, ...nav.mobileLinks].forEach(link => {
+            link.addEventListener('click', (e) => showPage(e.currentTarget.dataset.page));
+        });
+        document.querySelectorAll('#upload-btn-desktop, #upload-btn-mobile').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.getElementById('registerForm').reset();
+                document.querySelector('#registerPopup .popup-header h2').textContent = "이미지 등록하기";
+                document.getElementById('imageFile').required = true;
+                editingImageId = null;
+                openPopup('register');
+            });
+        });
+        document.querySelector('#registerPopup .close-btn').addEventListener('click', () => closePopup('register'));
+        document.querySelector('#cancel-upload-btn').addEventListener('click', () => closePopup('register'));
+        document.querySelector('#detailPopup .close-btn').addEventListener('click', () => closePopup('detail'));
+        document.getElementById('success-popup-close-btn').addEventListener('click', () => closePopup('success'));
+        document.getElementById('registerForm').addEventListener('submit', handleImageRegister);
+            
+        if(searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                searchTerm = e.target.value.toLowerCase();
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('.category-btn[data-category="전체"]').classList.add('active');
+                currentFilter = '전체';
+                renderGallery();
+            });
+        }
+        if(authorSearchDepartment) authorSearchDepartment.addEventListener('input', renderMyLibrary);
+        if(authorSearchName) authorSearchName.addEventListener('input', renderMyLibrary);
+        if(passwordSearchInput) passwordSearchInput.addEventListener('input', renderMyLibrary);
+
+        // --- Initial Load ---
+        setupImagePreview();
+        renderCategories();
+        renderGallery();
+        showPage('home');
+
+        // --- Drag and Drop Logic ---
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) {
+            const fileInput = document.getElementById('imageFile');
+
+            dropZone.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dropZone.classList.remove('dragover');
+
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    fileInput.files = files;
+                    const event = new Event('change', { bubbles: true });
+                    fileInput.dispatchEvent(event);
+                }
+            });
+        }
+    });
+    </script>
+</body>
+</html>
