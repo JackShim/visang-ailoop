@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visang Market</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        /*
+        * 디자인 가이드 반영
+        * Main: #00b5e2 (Cyan), Sub: #6a71f6 (Violet)
+        * Base: #FFFFFF (배경), #2b2b2b (본문)
+        * Font: Noto Sans KR
+        */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: #FFFFFF; /* 배경색 */
+            min-height: 100vh;
+            color: #2b2b2b; /* 본문색 */
+            position: relative;
+            line-height: 1.6;
+        }
+        /* Background Orbs Animation (Cyan/Violet 그라데이션의 3D 추상 형태) */
+        .bg-orbs {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.5;
+        }
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            mix-blend-mode: multiply;
+            filter: blur(80px);
+            opacity: 0.3;
+        }
+        .bg-orb-1 {
+            top: 5rem;
+            left: 5rem;
+            width: 24rem;
+            height: 24rem;
+            background: #00b5e2; /* Main Color */
+            animation: blob 7s infinite;
+        }
+        .bg-orb-2 {
+            top: 10rem;
+            right: 5rem;
+            width: 24rem;
+            height: 24rem;
+            background: #6a71f6; /* Sub Color */
+            animation: blob 7s infinite;
+            animation-delay: 2s;
+        }
+        .bg-orb-3 {
+            bottom: 5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24rem;
+            height: 24rem;
+            background: #00b5e2; /* Main Color */
+            animation: blob 7s infinite;
+            animation-delay: 4s;
+        }
+        @keyframes blob {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        .container { max-width: 1280px; margin: 0 auto; padding: 0 1rem; position: relative; z-index: 1; }
+        header {
+            position: relative;
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.7);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+        .header-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            /* Main/Sub Gradient */
+            background: linear-gradient(to right, #00b5e2, #6a71f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .logo:hover { opacity: 0.8; }
+        
+        /* Typography Sizes (Hero: 64px, Title: 28px, Body: 18px) */
+        .hero-title { font-size: 4rem; font-weight: 900; } /* 64px */
+        h1 { font-size: 1.75rem; font-weight: 700; } /* 28px */
+        h2 { font-size: 1.75rem; font-weight: 700; } /* 28px */
+        .body-text { font-size: 1.125rem; } /* 18px */
+
+        .btn {
+            padding: 0.75rem 1.5rem; /* 버튼 패딩 조정 */
+            border-radius: 0.75rem; /* 둥근 모서리 */
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* 부드러운 그림자 */
+        }
+        .btn-primary {
+            /* Main/Sub Gradient */
+            background: linear-gradient(to right, #00b5e2, #6a71f6);
+            color: white;
+        }
+        .btn-primary:hover {
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.8);
+            color: #2b2b2b;
+            border: 1px solid #e5e7eb;
+        }
+        .btn-secondary:hover { background: rgba(255, 255, 255, 0.95); }
+
+        .card {
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.8); /* Glassmorphism */
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); /* 부드러운 그림자 */
+        }
+        .grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .header-content { flex-wrap: wrap; gap: 0.5rem; }
+            .hero-title { font-size: 3rem; }
+        }
+        /* Input & Select Styles (Minimalist, Clean) */
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            transition: all 0.2s;
+            font-family: 'Noto Sans KR', sans-serif;
+            color: #2b2b2b;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #00b5e2; /* Main Color Focus */
+            box-shadow: 0 0 0 3px rgba(0, 181, 226, 0.1);
+        }
+        
+        /* 검색 아이콘 Wrapper 스타일 수정 */
+        .search-input-wrapper {
+            position: relative;
+        }
+        .search-input-wrapper .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 1.25rem;
+            height: 1.25rem;
+            color: #9ca3af;
+        }
+        .search-input-wrapper input.search-input {
+            padding-left: 1rem; /* 아이콘 제거에 따라 왼쪽 패딩 유지 */
+        }
+        
+        /* 메뉴 스타일 */
+        .category-menu {
+            display: flex;
+            gap: 0;
+            padding: 0;
+            margin: 0;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+            background: rgba(255, 255, 255, 0.9);
+            overflow: hidden;
+            justify-content: center;
+        }
+        .menu-item {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+            border: none;
+            background: transparent;
+            color: #2b2b2b;
+            cursor: pointer;
+            text-align: center;
+            border-right: 1px solid #e5e7eb;
+        }
+        .menu-item:last-child {
+            border-right: none;
+        }
+        .menu-item:hover {
+            background: rgba(0, 181, 226, 0.05);
+        }
+        .menu-item.active {
+            /* Main/Sub Gradient Active */
+            background: linear-gradient(to right, #00b5e2, #6a71f6);
+            color: white;
+            font-weight: 700;
+            border-color: transparent;
+            box-shadow: none;
+        }
+
+        .tool-card {
+            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .tool-card:hover {
+            box-shadow: 0 15px 25px rgba(0, 0, 0, 0.1);
+            transform: translateY(-5px); /* 부드러운 움직임 */
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+        }
+        .badge-type {
+            background: #6a71f6; /* Sub Color for type */
+        }
+        .badge-subject {
+            background: #00b5e2; /* Main Color for subject */
+        }
+        
+        /* 기존 좋아요 버튼 스타일 유지 */
+        .like-btn-card:hover { color: #ef4444 !important; }
+        .like-btn-detail:hover { color: #ef4444 !important; }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #2b2b2b;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            animation: slideIn 0.3s;
+            font-size: 1rem;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .hidden { display: none; }
+        .page { display: none; }
+        .page.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="bg-orbs">
+        <div class="bg-orb bg-orb-1"></div>
+        <div class="bg-orb bg-orb-2"></div>
+        <div class="bg-orb bg-orb-3"></div>
+    </div>
+    <div id="app"></div>
+    <script>
+        // **Firebase 연결 주석 처리 및 로컬 데이터 사용 (단일 HTML 파일 요구사항 준수)**
+        let db = null;
+        /*
+        try {
+            const firebaseConfig = { ... }; // 실제 키는 생략
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+        } catch (e) {
+            console.warn('Firebase 초기화 생략');
+            db = null;
+        }
+        */
+
+        // Level 1: 과목 카테고리 (과목별 브랜드 보기 메뉴 삭제됨)
+        const categories = ["전체", "영어", "국어", "수학"];
+        
+        // Level 2: 문제 유형
+        const problemTypes = ["객관식", "주관식", "퍼즐형", "듣기 평가", "서술형", "기타"];
+
+        // Level 3/4: 교육 콘텐츠 개발 방식 데이터 (기존 defaultTools를 대체)
+        const contentMethods = [
+            {
+                id: 1, title: "AI 기반 객관식 퀴즈 생성 프롬프트",
+                description: "주요 키워드를 입력하면 난이도별 객관식 문제 5개를 즉시 생성합니다.",
+                longDescription: "짧은 시간 안에 난이도와 유형이 보장된 객관식 문제를 대량으로 만들어야 할 때 유용합니다. 특히 개념 확인이나 빠른 복습을 위한 퀴즈 제작에 최적화되어 있습니다. 이 개발 방식은 수많은 테스트와 피드백을 통해 최적화된 AI 프롬프트 엔지니어링 결과를 공유합니다.",
+                category: "영어", // Level 1 Subject
+                level2Type: "객관식", // Level 2 Problem Type
+                productionMethod: "AI / 프롬프트 엔지니어링", // 제작 방식
+                requiredResource: "키워드 리스트, 텍스트 지문 (선택)", // 필요 리소스
+                timeSpent: "5분 이내", // 제작 소요 시간
+                recommendedSubject: "영어, 국어, 사회", // 적용하면 좋을 과목
+                coinPrice: 1500, // 코인 거래 가격
+                aiModel: "GPT-4", type: "프롬프트",
+                likes: 245, views: 1820, comments: 32, createdAt: "2024-01-15",
+            },
+            {
+                id: 2, title: "논리적 사고 서술형 심화 개발 방식",
+                description: "심화 학습을 위한 논리적 사고 기반의 서술형 문제를 만드는 체계적인 가이드입니다.",
+                longDescription: "단순 암기가 아닌, 학생들의 논리적 사고력과 문제 해결 능력을 평가할 수 있는 고품질 서술형 문제를 개발하는 방법론을 공유합니다. 복잡한 채점 기준표(Rubric) 제작 방식과 예시가 포함되어 있습니다.",
+                category: "국어",
+                level2Type: "서술형",
+                productionMethod: "CMS / 전문가 인력",
+                requiredResource: "장문 지문, 문법 규칙 자료, 채점 기준표 원본",
+                timeSpent: "30분 ~ 1시간",
+                recommendedSubject: "국어, 사회, 과학",
+                coinPrice: 3500,
+                aiModel: "인간 전문가 기반", type: "개발 방식",
+                likes: 312, views: 2150, comments: 24, createdAt: "2024-01-18",
+            },
+            {
+                id: 3, title: "인터랙티브 퍼즐형 웹 콘텐츠 제작 가이드",
+                description: "학습 내용을 기반으로 한 드래그&드롭 퍼즐을 웹 기반으로 빠르게 제작하는 기술 공유입니다.",
+                longDescription: "수학 공식 암기나 영어 단어 매칭 등 지루할 수 있는 학습 내용을 게임 요소(Gamification)를 가미하여 재미있게 제작할 수 있는 기술 공유입니다. 웹 표준 기술(HTML/CSS/JS)만을 사용하여 코딩 교육에도 활용 가능합니다.",
+                category: "수학",
+                level2Type: "퍼즐형",
+                productionMethod: "웹 (HTML5, JS)",
+                requiredResource: "이미지 에셋 (아이콘 등), JS 라이브러리 (선택)",
+                timeSpent: "2시간 ~ 4시간",
+                recommendedSubject: "수학, 영어, 기타 예체능",
+                coinPrice: 5000,
+                aiModel: "None", type: "개발 방식",
+                likes: 428, views: 3240, comments: 45, createdAt: "2024-01-20",
+            },
+            {
+                id: 4, title: "원어민 듣기 평가 음원 제작 가이드",
+                description: "합성 음성이 아닌 자연스러운 원어민 음성을 낮은 비용으로 녹음하여 편집하는 노하우를 제공합니다.",
+                longDescription: "듣기 평가 문제의 품질을 좌우하는 음원 제작 과정을 최적화합니다. 전문 스튜디오 대신 저비용 고효율 홈 스튜디오 환경 구축 및 퀄리티 컨트롤 노하우가 핵심입니다.",
+                category: "영어",
+                level2Type: "듣기 평가",
+                productionMethod: "홈 스튜디오 / 오디오 편집 기술",
+                requiredResource: "녹음 장비, 스크립트",
+                timeSpent: "1시간 ~ 2시간",
+                recommendedSubject: "영어, 외국어",
+                coinPrice: 4000,
+                aiModel: "None", type: "개발 방식",
+                likes: 567, views: 4120, comments: 56, createdAt: "2024-01-22",
+            }
+        ];
+        
+        // 상태 관리
+        let state = {
+            currentPage: 'home',
+            currentToolId: null,
+            tools: contentMethods, // 기본 데이터로 설정
+            filteredTools: [],
+            selectedCategory: '전체',
+            searchQuery: '',
+            sortBy: '인기순',
+            currentPageNum: 1,
+            likedTools: new Set(),
+            isLoading: false,
+            ITEMS_PER_PAGE: 12,
+            selectedSubMenu: '유형 보기', // [NEW] 하위 메뉴 상태
+        };
+
+        // 유틸리티 함수
+        function filterAndSortTools(tools, filters) {
+            let filtered = [...tools];
+            if (filters.category && filters.category !== "전체") {
+                filtered = filtered.filter(t => t.category === filters.category);
+            }
+            // 검색은 Level 2 유형(level2Type)과 제목, 설명 포함
+            if (filters.searchQuery.trim()) {
+                const query = filters.searchQuery.toLowerCase();
+                filtered = filtered.filter(t =>
+                    t.title.toLowerCase().includes(query) ||
+                    t.description.toLowerCase().includes(query) ||
+                    t.level2Type.toLowerCase().includes(query)
+                );
+            }
+            // 정렬 로직 (기존 템플릿 로직 유지)
+            filtered.sort((a, b) => b.likes - a.likes);
+            return filtered;
+        }
+        
+        function paginateTools(tools, page, itemsPerPage) {
+            const start = (page - 1) * itemsPerPage;
+            return tools.slice(start, start + itemsPerPage);
+        }
+        
+        function getTotalPages(totalItems, itemsPerPage) {
+            return Math.ceil(totalItems / itemsPerPage);
+        }
+        
+        // Toast 알림 (코인 거래/채팅 시뮬레이션용)
+        function showToast(title, description, variant = 'default') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            if (variant === 'success') {
+                toast.style.background = '#6a71f6'; // Sub Color
+            } else if (variant === 'info') {
+                toast.style.background = '#00b5e2'; // Main Color
+            }
+            toast.innerHTML = `<strong>${title}</strong><br>${description}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        // 페이지 이동 함수
+        function navigate(page, toolId = null) {
+            state.currentPage = page;
+            state.currentToolId = toolId;
+            // 상세 페이지 이동 시 좋아요 상태를 localStorage에서 불러옴
+            if (page === 'detail' && toolId) {
+                const storedLikes = localStorage.getItem('likedTools');
+                if (storedLikes) {
+                    try { state.likedTools = new Set(JSON.parse(storedLikes)); } catch (e) {}
+                }
+            }
+            render();
+            // 상세 페이지일 경우 스크롤 상단으로 이동
+            if (page === 'detail') { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        }
+
+        // 카테고리 설정 (Level 1 메뉴)
+        function setCategory(category) {
+            state.selectedCategory = category;
+            state.searchQuery = ''; // 카테고리 변경 시 검색 초기화
+            state.currentPageNum = 1;
+            state.selectedSubMenu = '유형 보기'; // [NEW] 메인 카테고리 변경 시 하위 메뉴는 '유형 보기'로 초기화
+            render();
+        }
+
+        // [NEW] 하위 메뉴 설정
+        function setSubMenu(subMenu) {
+            state.selectedSubMenu = subMenu;
+            state.currentPageNum = 1;
+            render();
+        }
+        
+        // 페이지 변경
+        function changePage(pageNum) {
+            if (pageNum < 1 || pageNum > getTotalPages(filterAndSortTools(state.tools, state).length, state.ITEMS_PER_PAGE)) return;
+            state.currentPageNum = pageNum;
+            render();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        // 좋아요 처리 (Level 4, 카드)
+        function handleLike(toolId) {
+            const tool = state.tools.find(t => t.id === toolId);
+            if (!tool) return;
+            
+            const isLiked = state.likedTools.has(toolId);
+            if (isLiked) {
+                state.likedTools.delete(toolId);
+                tool.likes = Math.max(0, (tool.likes || 0) - 1);
+            } else {
+                state.likedTools.add(toolId);
+                tool.likes = (tool.likes || 0) + 1;
+            }
+            
+            localStorage.setItem('likedTools', JSON.stringify(Array.from(state.likedTools)));
+            render();
+        }
+        
+        function handleDetailLike(toolId) {
+            handleLike(toolId);
+            // 상세 페이지에서는 좋아요 버튼만 다시 렌더링하여 깜빡임 방지
+            const likeButton = document.getElementById('detailLikeButton');
+            const tool = state.tools.find(t => t.id === toolId);
+            if (likeButton && tool) {
+                const isLiked = state.likedTools.has(toolId);
+                likeButton.style.color = isLiked ? '#ef4444' : '#6b7280';
+                likeButton.querySelector('svg').setAttribute('fill', isLiked ? 'currentColor' : 'none');
+                likeButton.querySelector('span').textContent = tool.likes;
+            }
+        }
+        
+        // 검색 필터
+        function setSearchQuery(query) {
+            state.searchQuery = query;
+            state.selectedCategory = '전체';
+            state.selectedSubMenu = '유형 보기'; // 검색 시 서브 메뉴도 초기화
+            state.currentPageNum = 1;
+            render();
+        }
+
+        // 렌더링 함수들
+        function render() {
+            const app = document.getElementById('app');
+            if (state.currentPage === 'home') {
+                app.innerHTML = renderHome();
+            } else if (state.currentPage === 'detail') {
+                app.innerHTML = renderDetail();
+            }
+            attachEventListeners();
+        }
+
+        function renderHome() {
+            // 필터링은 항상 메인 카테고리를 기준으로 수행합니다.
+            const filtered = filterAndSortTools(state.tools, { category: state.selectedCategory, searchQuery: state.searchQuery, sortBy: state.sortBy });
+            const paginated = paginateTools(filtered, state.currentPageNum, state.ITEMS_PER_PAGE);
+            const totalPages = getTotalPages(filtered.length, state.ITEMS_PER_PAGE);
+
+            const isSubjectSelected = state.selectedCategory !== '전체' && state.searchQuery === ''; // 검색 중일 때는 하위 메뉴 표시 안함
+
+            // [NEW] 하위 메뉴 HTML
+            const subMenuHtml = isSubjectSelected ? `
+                <div style="margin-top: 1.5rem; display: flex; justify-content: center; width: 100%;">
+                    <div class="category-menu" style="max-width: 500px;">
+                        <button class="menu-item ${state.selectedSubMenu === '유형 보기' ? 'active' : ''} body-text" 
+                                onclick="setSubMenu('유형 보기')">유형 보기</button>
+                        <button class="menu-item ${state.selectedSubMenu === '브랜드' ? 'active' : ''} body-text" 
+                                onclick="setSubMenu('브랜드')">${state.selectedCategory} 브랜드</button>
+                    </div>
+                </div>
+            ` : '';
+            
+            // [NEW] 콘텐츠 목록 HTML (유형별 카드 또는 브랜드 플레이스홀더)
+            let contentListHtml = '';
+
+            if (isSubjectSelected && state.selectedSubMenu === '브랜드') {
+                // 브랜드 보기 플레이스홀더
+                contentListHtml = `
+                    <div style="margin-top: 3rem; text-align: center; padding: 4rem 2rem; background: rgba(106, 113, 246, 0.05); border-radius: 1rem; border: 1px solid rgba(106, 113, 246, 0.2); backdrop-filter: blur(5px);">
+                        <h2 style="font-size: 1.5rem; font-weight: bold; color: #6a71f6; margin-bottom: 0.5rem;">${state.selectedCategory} 브랜드 콘텐츠 영역</h2>
+                        <p class="body-text" style="color: #6b7280;">이곳은 **${state.selectedCategory}** 과목에 특화된 비상 교육의 브랜드별 콘텐츠 목록을 표시하는 영역입니다.</p>
+                        <p style="font-size: 0.875rem; color: #9ca3af; margin-top: 1rem;">(현재 시뮬레이션 화면입니다.)</p>
+                    </div>
+                `;
+            } else {
+                // 유형 보기 (기존 카드 리스트)
+                if (paginated.length > 0) {
+                    contentListHtml = `
+                    <div style="margin-top: 3rem; margin-bottom: 2rem;">
+                        <h2 style="font-size: 1.75rem; font-weight: bold; color: #2b2b2b;">${state.selectedCategory === '전체' ? '추천 개발 방식' : state.selectedCategory + ' '}</h2>
+                        <p class="body-text" style="color: #6b7280; margin-top: 0.25rem;">유형별 카드를 클릭하여 개발 방식을 확인하고 거래해보세요.</p>
+                    </div>
+                    <div class="grid" id="toolGridContainer">
+                        ${paginated.map(tool => {
+                            const isLiked = state.likedTools.has(tool.id);
+                            return `
+                            <div class="tool-card" onclick="navigate('detail', ${tool.id})">
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                        <span class="badge badge-subject">${tool.category}</span>
+                                        <span class="badge badge-type body-text">${tool.level2Type}</span> </div>
+                                    <span style="font-size: 0.875rem; color: #6b7280;">${tool.aiModel}</span>
+                                </div>
+                                <h3 style="font-size: 1.25rem; font-weight: bold; color: #111827; margin-bottom: 0.5rem;">${tool.title}</h3>
+                                <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 1rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${tool.description}</p>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; border-top: 1px solid #e5e7eb; font-size: 0.875rem; color: #6b7280;">
+                                    <button onclick="event.stopPropagation(); handleLike(${tool.id})" class="like-btn-card" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.25rem; transition: color 0.2s; color: ${isLiked ? '#ef4444' : '#6b7280'};">
+                                        <svg width="16" height="16" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                        </svg>
+                                        <span>${tool.likes}</span>
+                                    </button>
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                            <span style="font-weight: bold; color: #6a71f6;">${tool.coinPrice.toLocaleString()}</span> 코인
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    ${totalPages > 1 ? `
+                    <div id="paginationContainer" style="margin-top: 2rem; display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+                        <span style="margin-left: 1rem; font-size: 0.875rem; color: #6b7280;">${state.currentPageNum} / ${totalPages} 페이지</span>
+                    </div>
+                    ` : ''}
+                    `;
+                } else {
+                     contentListHtml = `<div style="text-align: center; padding: 4rem 0;"><p class="body-text" style="color: #6b7280;">해당 조건에 맞는 개발 방식이 없습니다.</p></div>`;
+                }
+            }
+
+
+            return `
+            <header>
+                <div class="header-content">
+                    <div class="logo" onclick="navigate('home')">Visang Market</div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-secondary" onclick="showToast('기능 시뮬레이션', '개인 보유 코인 확인 페이지로 이동합니다.', 'info')">💰 내 코인</button>
+                        <button class="btn btn-primary" onclick="showToast('기능 시뮬레이션', '개발 방식 등록 페이지로 이동합니다.', 'success')">등록하기</button>
+                    </div>
+                </div>
+            </header>
+            <main class="container" style="padding-top: 2rem;">
+                <div class="search-card" style="margin-bottom: 2rem;">
+                    <div class="hero-title" style="margin-bottom: 1rem; text-align: center;">
+                        <span style="background: linear-gradient(to right, #00b5e2, #6a71f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Visang Market</span>
+                    </div>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <div class="search-input-wrapper" style="flex: 1;">
+                            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d=""></path> 
+                            </svg>
+                            <input type="text" class="search-input body-text" placeholder="검색: 객관식, 서술형, AI, 영어 등" value="${state.searchQuery}" oninput="setSearchQuery(this.value)" style="border-radius: 9999px;">
+                        </div>
+                    </div>
+                </div>
+                <div class="category-menu" style="margin-bottom: 1rem;">
+                    ${categories.map(cat => `
+                        <button class="menu-item ${state.selectedCategory === cat ? 'active' : ''} body-text" onclick="setCategory('${cat}')">${cat}</button>
+                    `).join('')}
+                </div>
+                
+                ${subMenuHtml}
+                
+                ${contentListHtml}
+
+            </main>
+            `;
+        }
+
+        // 레벨 4 (상세 분류의 팝업 화면) 렌더링
+        function renderDetail() {
+            const tool = state.tools.find(t => t.id === state.currentToolId);
+            if (!tool) {
+                return `<div class="container" style="padding-top: 2rem;">개발 방식을 찾을 수 없습니다.</div>`;
+            }
+            const isLiked = state.likedTools.has(tool.id);
+
+            return `
+            <header>
+                <div class="header-content">
+                    <button class="btn btn-secondary body-text" onclick="navigate('home')">← 목록으로</button>
+                    <div class="logo" onclick="navigate('home')">Visang Market</div>
+                    <button class="btn btn-secondary body-text" onclick="showToast('기능 시뮬레이션', '공유하기 기능이 실행됩니다.', 'info')">공유하기</button>
+                </div>
+            </header>
+            <main class="container" style="padding-top: 3rem; padding-bottom: 5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <span class="badge badge-subject body-text">${tool.category}</span>
+                        <span class="badge badge-type body-text">${tool.level2Type}</span>
+                    </div>
+                    <span style="color: #6b7280; font-size: 0.875rem;">조회수 ${tool.views} · 등록일 ${tool.createdAt}</span>
+                </div>
+                
+                <h1 style="font-size: 2rem; margin-bottom: 0.5rem;">${tool.title}</h1>
+                <div style="font-size: 1rem; color: #6b7280; margin-bottom: 2rem;">
+                    제작 방식: <span style="font-weight: 600;">${tool.productionMethod}</span>
+                </div>
+                
+                <div style="margin-bottom: 3rem; padding: 1.5rem; background: rgba(0, 181, 226, 0.05); border-radius: 1rem; display: flex; flex-direction: column; align-items: stretch; border: 1px solid rgba(0, 181, 226, 0.2); gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="body-text" style="font-weight: bold; color: #2b2b2b;">
+                            💰 개발 방식 거래가: <span style="font-size: 1.5rem; color: #6a71f6;">${tool.coinPrice.toLocaleString()}</span> 코인
+                        </div>
+                        <button id="detailLikeButton" onclick="handleDetailLike(${tool.id})" class="like-btn-detail body-text" style="background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: color 0.2s; color: ${isLiked ? '#ef4444' : '#6b7280'};">
+                            <svg width="24" height="24" fill="${isLiked ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                            </svg>
+                            <span style="font-weight: bold;">${tool.likes}</span>
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-primary body-text" style="flex: 2; background: linear-gradient(to right, #6a71f6, #00b5e2); box-shadow: 0 4px 10px rgba(106, 113, 246, 0.3);" onclick="showToast('코인 거래 시뮬레이션', '개발 방식 구매를 위한 코인 ${tool.coinPrice.toLocaleString()}개가 차감되었습니다.', 'success');">
+                            💰 코인으로 거래하기
+                        </button>
+                        <button class="btn btn-secondary body-text" style="flex: 1;" onclick="showToast('채팅 기능 시뮬레이션', '개발 방식 등록자(${tool.aiModel || '익명 전문가'})와 1:1 채팅을 시작합니다.', 'info');">
+                            💬 개별 채팅
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 3rem;">
+                    <h2 style="font-size: 1.75rem; font-weight: bold; color: #00b5e2; margin-bottom: 1rem;">💡핵심 포인트</h2>
+                    <p class="body-text" style="line-height: 1.8; color: #374151;">${tool.longDescription || tool.description}</p>
+                </div>
+                
+                <div class="card" style="margin-top: 2rem;">
+                    <h2 style="font-size: 1.75rem; font-weight: bold; color: #2b2b2b; margin-bottom: 1.5rem;">💡개발 세부 정보</h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 1.125rem;">
+                        <div style="background: rgba(0, 181, 226, 0.05); border-radius: 0.75rem; padding: 1rem; border: 1px solid rgba(0, 181, 226, 0.2); backdrop-filter: blur(5px);">
+                            <p style="font-weight: bold; color: #00b5e2; margin-bottom: 0.25rem; font-size: 1rem;">제작 방식 (웹, CMS, AI 등)</p>
+                            <p class="body-text" style="font-weight: 500;">${tool.productionMethod}</p>
+                        </div>
+                        <div style="background: rgba(0, 181, 226, 0.05); border-radius: 0.75rem; padding: 1rem; border: 1px solid rgba(0, 181, 226, 0.2); backdrop-filter: blur(5px);">
+                            <p style="font-weight: bold; color: #00b5e2; margin-bottom: 0.25rem; font-size: 1rem;">제작 시 필요 리소스</p>
+                            <p class="body-text" style="font-weight: 500;">${tool.requiredResource}</p>
+                        </div>
+                        <div style="background: rgba(0, 181, 226, 0.05); border-radius: 0.75rem; padding: 1rem; border: 1px solid rgba(0, 181, 226, 0.2); backdrop-filter: blur(5px);">
+                            <p style="font-weight: bold; color: #00b5e2; margin-bottom: 0.25rem; font-size: 1rem;">제작 소요 시간</p>
+                            <p class="body-text" style="font-weight: 500;">${tool.timeSpent}</p>
+                        </div>
+                        <div style="background: rgba(0, 181, 226, 0.05); border-radius: 0.75rem; padding: 1rem; border: 1px solid rgba(0, 181, 226, 0.2); backdrop-filter: blur(5px);">
+                            <p style="font-weight: bold; color: #00b5e2; margin-bottom: 0.25rem; font-size: 1rem;">아래 과목에 추천해요</p>
+                            <p class="body-text" style="font-weight: 500;">${tool.recommendedSubject}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 3rem;">
+                    <h2 style="font-size: 1.75rem; font-weight: bold; color: #2b2b2b; margin-bottom: 1.5rem;">📎사용자 리뷰 </h2>
+                    <p class="body-text" style="color: #6b7280;">이 개발 방식을 사용해 본 후기를 남겨주세요.</p>
+                </div>
+                <div id="commentsSection" style="margin-top: 1rem;">
+                    <div class="card body-text" style="margin-bottom: 1rem;">
+                        <p style="font-weight: bold; color: #6a71f6;">김**</p>
+                        <p>객관식 문제 제작 시간이 획기적으로 줄었습니다. 코인 거래 가치가 충분합니다!</p>
+                        <span style="font-size: 0.875rem; color: #9ca3af;">2024.11.20</span>
+                    </div>
+                    <div class="card body-text">
+                        <p style="font-weight: bold; color: #6a71f6;">이**</p>
+                        <p>퍼즐형 콘텐츠 제작 가이드가 구체적이어서 비개발자도 쉽게 따라 할 수 있었어요.</p>
+                        <span style="font-size: 0.875rem; color: #9ca3af;">2024.11.25</span>
+                    </div>
+                    </div>
+            </main>
+            `;
+        }
+
+        function attachEventListeners() {
+            // 이벤트 리스너 부착 로직 (현재는 전역 함수로 처리)
+        }
+        
+        // 초기화
+        async function init() {
+            // 기존 템플릿의 좋아요 상태 로드 로직
+            const stored = localStorage.getItem('likedTools');
+            if (stored) {
+                try {
+                    state.likedTools = new Set(JSON.parse(stored));
+                } catch (e) {}
+            }
+            render();
+        }
+        
+        // 전역 함수로 노출
+        window.navigate = navigate;
+        window.setCategory = setCategory;
+        window.setSubMenu = setSubMenu; // [NEW] setSubMenu 노출
+        window.changePage = changePage;
+        window.handleLike = handleLike;
+        window.handleDetailLike = handleDetailLike;
+        window.setSearchQuery = setSearchQuery;
+
+        init();
+    </script>
+</body>
+</html>
